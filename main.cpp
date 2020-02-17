@@ -37,41 +37,51 @@ void projection() {
     imshow("Canny", cannyImg);
 
     vector<vector<Point>> cannyContours;
-    findContours(cannyImg, cannyContours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(cannyImg, cannyContours, RETR_TREE, CHAIN_APPROX_NONE);
 
     Mat cannyContoursImg = Mat::zeros(img.size(), CV_8UC3);
 
-    double eps = 3;
+    // double eps = 2;
 
-    for (size_t i = 0; i < cannyContours.size(); i++) {
-        // cout << cannyContours[i] << endl;
-        drawContours(cannyContoursImg, cannyContours, (int)i, Scalar(255, 0, 0));
+    for (double eps = 1; eps <= 4; eps++) {
+        for (size_t i = 0; i < cannyContours.size(); i++) {
+            // cout << cannyContours[i] << endl;
 
-        vector<Point> experiment = cannyContours[i];
-        // cout << experiment << endl;
-        // cout << experiment.size() << endl;
-        vector<Point> result = douglasPeuckerRecr(experiment, eps);
-        // vector<Point> result = douglasPeucker(experiment, eps);
-        // cout << result << endl;
-        // cout << result2.size() << endl;
-        cout << result.size() << endl;
+            /*
+            for (int j = 0; j < cannyContours[i].size(); j++) {
+                line(cannyContoursImg, cannyContours[i][j], cannyContours[i][(j+1)%cannyContours[i].size()], Scalar(255, j, j));
+                imshow("Canny contours", cannyContoursImg);
+                waitKey(0);
+            }
+            */
 
-        int pointsLength = result.size();
-        for ( int j = 0; j < pointsLength; j++ )
-        {
-            line(cannyContoursImg, result[j], result[(j+1)%pointsLength], Scalar(0, 255, 0) );
+            drawContours(cannyContoursImg, cannyContours, (int) i, Scalar(255, 0, 0));
+
+            vector<Point> experiment = cannyContours[i];
+            // cout << experiment << endl;
+            // cout << experiment.size() << endl;
+            vector<Point> result = douglasPeuckerRecr(experiment, eps);
+            // vector<Point> result = douglasPeucker(experiment, eps);
+            // cout << result << endl;
+            // cout << result2.size() << endl;
+            // cout << result.size() << endl;
+
+            int pointsLength = result.size();
+            for (int j = 0; j < pointsLength; j++) {
+                line(cannyContoursImg, result[j], result[(j + 1) % pointsLength], Scalar(0, 255, 0));
+            }
+            for (int j = 0; j < pointsLength; j++) {
+                line(cannyContoursImg, result[j], result[j], Scalar(0, 0, 255));
+            }
+
+            cout << "orig " << experiment.size() << " dugl " << pointsLength << endl;
         }
-        for ( int j = 0; j < pointsLength; j++ )
-        {
-            line(cannyContoursImg, result[j], result[j], Scalar(0, 0, 255) );
-        }
 
-        cout << "orig " << experiment.size() << " dugl " << pointsLength << endl;
+        imshow("Canny contours", cannyContoursImg);
+
+        waitKey(0);
     }
-
-    imshow("Canny contours", cannyContoursImg);
     imwrite("../minAreaRect.jpg", cannyContoursImg);
-
     waitKey(0);
 }
 
