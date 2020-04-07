@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include "Contour.cpp"
 
 using namespace cv;
 using namespace std;
@@ -16,8 +17,13 @@ void contours();
 void rotatedMinAreaRect();
 void projection();
 vector<Point> douglasPeucker(vector<Point> polyline, double eps);
-vector<Point> douglasPeuckerRecr(vector<Point> polyline, double eps);
+vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps);
 double perpendicularLength(Point, Point, Point);
+void test();
+
+Scalar red = Scalar(0, 0, 255);
+Scalar green = Scalar(0, 255, 0);
+Scalar blue = Scalar(255, 0, 0);
 
 int main() {
     // sobelFunc();
@@ -28,60 +34,122 @@ int main() {
     // convexHull();
     // rotatedMinAreaRect();
     projection();
+    // test();
+}
+
+void test() {
+    vector<Point> points = {Point(0, 0)};
+    Contour contour = Contour(points);
+    contour.print();
+}
+
+tuple<vector<Point>, bool> doubleContourToSimple(vector<Point> points) {
+    vector<Point> result;
+    bool hasStart = false;
+    for (int i = 0; i < points.size(); i++) {
+        if (!hasStart &&
+            i - 1 != 0 && i + 1 != points.size() &&
+            points[i-1] == points[i+1]) {
+            result.push_back(points[i]);
+            hasStart = true;
+            continue;
+        }
+        if (hasStart) {
+            result.push_back(points[i]);
+        }
+        if (i - 1 != 0 && i + 1 != points.size() && points[i-1] == points[i+1]) {
+            break;
+        }
+    }
+    if (result.size() == 0) {
+        return make_tuple(points, false);
+    }
+
+    return make_tuple(result, true);
+}
+
+vector<Point> deleteRepeatedNeighborPoints(vector<Point> points) {
+    vector<Point> result;
+    result.push_back(points[0]);
+    for (int i = 1; i < points.size(); i++) {
+        if (points[i] != points[i-1]) {
+            result.push_back(points[i]);
+        }
+    }
+    return result;
+}
+
+void printPoints(vector<Point> points) {
+    for(Point point: points) {
+        cout << point.x << ";" << point.y << endl;
+    }
+}
+
+
+void showImg(Mat img, String imgName) {
+    imshow(imgName, img);
+    waitKey(0);
+}
+
+void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false, String imgName = "") {
+    int size = points.size();
+    int end = size;
+    if (!joinEnds) {
+        end -= 1;
+    }
+    for (int j = 0; j < end; j++) {
+        line(img, points[j], points[(j + 1) % size], color);
+        if (isShowImg) {
+            showImg(img, imgName);
+        }
+    }
+}
+
+void drawPoints(Mat img, vector<Point> points, Scalar color) {
+    int size = points.size();
+    for (int j = 0; j < size; j++) {
+        line(img, points[j], points[j], color);
+    }
 }
 
 void projection() {
     Mat img = imread("../satimg.jpg");
-    Mat cannyImg;
-    Canny(img, cannyImg, 100, 255);
-    imshow("Canny", cannyImg);
+    cout << img.size() << endl;
 
-    vector<vector<Point>> cannyContours;
-    findContours(cannyImg, cannyContours, RETR_TREE, CHAIN_APPROX_NONE);
+    Mat contoursImg;
+    Canny(img, contoursImg, 100, 255);
+    imshow("Contours", contoursImg);
+    imwrite("../contours.jpg", contoursImg);
 
-    Mat cannyContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    vector<vector<Point>> contours;
+    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    // double eps = 2;
+    Mat simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
 
-    for (double eps = 1; eps <= 4; eps++) {
-        for (size_t i = 0; i < cannyContours.size(); i++) {
-            // cout << cannyContours[i] << endl;
+    for (int eps = 1; eps <= 4; eps++) {
+        for (size_t i = 0; i < contours.size(); i++) {
+            vector<Point> contour = contours[i];
+            tuple<vector<Point>, bool> simpleResult = doubleContourToSimple(contour);
+            vector<Point> simple = get<0>(simpleResult);
+            bool isSimpled = get<1>(simpleResult);
 
-            /*
-            for (int j = 0; j < cannyContours[i].size(); j++) {
-                line(cannyContoursImg, cannyContours[i][j], cannyContours[i][(j+1)%cannyContours[i].size()], Scalar(255, j, j));
-                imshow("Canny contours", cannyContoursImg);
-                waitKey(0);
-            }
-            */
-
-            drawContours(cannyContoursImg, cannyContours, (int) i, Scalar(255, 0, 0));
-
-            vector<Point> experiment = cannyContours[i];
-            // cout << experiment << endl;
-            // cout << experiment.size() << endl;
-            vector<Point> result = douglasPeuckerRecr(experiment, eps);
-            // vector<Point> result = douglasPeucker(experiment, eps);
-            // cout << result << endl;
-            // cout << result2.size() << endl;
-            // cout << result.size() << endl;
+            vector<Point> result = ramerDouglasPeuckerRecr(simple, eps);
+            result = deleteRepeatedNeighborPoints(result);
 
             int pointsLength = result.size();
-            for (int j = 0; j < pointsLength; j++) {
-                line(cannyContoursImg, result[j], result[(j + 1) % pointsLength], Scalar(0, 255, 0));
-            }
-            for (int j = 0; j < pointsLength; j++) {
-                line(cannyContoursImg, result[j], result[j], Scalar(0, 0, 255));
-            }
+            drawLines(simplContoursImg, result, green, !isSimpled);
+            drawPoints(simplContoursImg, result, blue);
 
-            cout << "orig " << experiment.size() << " dugl " << pointsLength << endl;
+            cout << i << endl;
+            cout << "orig " << contour.size() << " simple " << simple.size() << " dugl " << pointsLength << endl;
+
         }
-
-        imshow("Canny contours", cannyContoursImg);
+        imshow("Building contours", simplContoursImg);
+        imwrite(format("../ramerDouglasPeucker%d.jpg", eps), simplContoursImg);
 
         waitKey(0);
+        simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
     }
-    imwrite("../minAreaRect.jpg", cannyContoursImg);
     waitKey(0);
 }
 
@@ -124,7 +192,7 @@ vector<Point> douglasPeucker(vector<Point> polyline, double eps) {
     return result;
 }
 
-vector<Point> douglasPeuckerRecr(vector<Point> polyline, double eps) {
+vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps) {
     Point first = polyline[0];
     Point last = polyline[polyline.size() - 1];
     double maxDistance = 0;
@@ -136,19 +204,14 @@ vector<Point> douglasPeuckerRecr(vector<Point> polyline, double eps) {
             index = i;
         }
     }
-    // cout << "max dist " << maxDistance << endl;
-    // cout << "index " << index << endl;
     if (maxDistance >= eps) {
-        vector<Point> left(&polyline[0], &polyline[index]);
-        vector<Point> right(&polyline[index], &polyline[polyline.size() - 1]);
-        // cout << "Left " << left << endl;
-        // cout << "Right " << right << endl;
-        vector<Point> leftPolyLine = douglasPeuckerRecr(left, eps);
-        vector<Point> rightPolyline = douglasPeuckerRecr(right, eps);
+        vector<Point> left(&polyline[0], &polyline[index+1]);
+        vector<Point> right(&polyline[index], &polyline[polyline.size()]);
+        vector<Point> leftPolyLine = ramerDouglasPeuckerRecr(left, eps);
+        vector<Point> rightPolyline = ramerDouglasPeuckerRecr(right, eps);
         leftPolyLine.insert(leftPolyLine.end(), rightPolyline.begin(), rightPolyline.end());
         return leftPolyLine;
     } else {
-        // cout << "Begin and end" << endl;
         vector<Point> result;
         result.push_back(polyline[0]);
         result.push_back(polyline[polyline.size() - 1]);
@@ -196,11 +259,6 @@ void rotatedMinAreaRect() {
         vector<Point> poly;
         approxPolyDP(contour, poly, 5, true);
         polylines(drawing, poly, true, Scalar(255, 0, 255), 1);
-        /*
-        if (i % 10 == 1) {
-            putText(drawing, buffer, rectPoints[0], FONT_HERSHEY_PLAIN, 0.8, Scalar(255, 255, 0));
-        }
-         */
     }
     namedWindow("Min area rect", WINDOW_NORMAL);
     imshow("Min area rect", drawing);
