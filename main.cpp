@@ -3,47 +3,44 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include "Contour.cpp"
 
+#include "main.h"
 using namespace cv;
 using namespace std;
 
-void sobelFunc();
-void cannyFunc();
-void houghFunc();
-void first();
-void convexHull();
-void contours();
-void rotatedMinAreaRect();
-void projection();
-vector<Point> douglasPeucker(vector<Point> polyline, double eps);
-vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps);
-double perpendicularLength(Point, Point, Point);
-void test();
+// contour utils
+tuple<vector<Point>, bool> doubleContourToSingle(vector<Point> points);
+vector<Point> deleteRepeatedNeighborPoints(vector<Point> points);
 
-Scalar red = Scalar(0, 0, 255);
-Scalar green = Scalar(0, 255, 0);
-Scalar blue = Scalar(255, 0, 0);
+// drawing
+Scalar red(Scalar(0, 0, 255));
+Scalar green(Scalar(0, 255, 0));
+Scalar blue(Scalar(255, 0, 0));
+void showImg(Mat img, String imgName);
+void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds, bool isShowImg,
+               String imgName);
+void drawPoints(Mat img, vector<Point> points, Scalar color);
+void printPoints(vector<Point> points);
+
+// grid
+void gribovAlgorithm();
+
+// my dp
+double perpendicularLength(Point first, Point second, Point zero);
+vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps);
+vector<Point> douglasPeucker(vector<Point> polyline, double eps);
+
 
 int main() {
-    // sobelFunc();
-    // cannyFunc();
-    // houghFunc();
-    // first();
-    // contours();
-    // convexHull();
+    gribovAlgorithm();
     // rotatedMinAreaRect();
-    projection();
-    // test();
+    // !!! projection();
+    // integratedDP();
 }
 
-void test() {
-    vector<Point> points = {Point(0, 0)};
-    Contour contour = Contour(points);
-    contour.print();
-}
-
-tuple<vector<Point>, bool> doubleContourToSimple(vector<Point> points) {
+// двойной контур, в котором дважды повторяются точки и у которого начало где-то не в начале, переводит в одиночный
+// актуально для незамкнутых контуров
+tuple<vector<Point>, bool> doubleContourToSingle(vector<Point> points) {
     vector<Point> result;
     bool hasStart = false;
     for (int i = 0; i < points.size(); i++) {
@@ -68,6 +65,7 @@ tuple<vector<Point>, bool> doubleContourToSimple(vector<Point> points) {
     return make_tuple(result, true);
 }
 
+// проходит по точкам и удаляет дублеров-соседей
 vector<Point> deleteRepeatedNeighborPoints(vector<Point> points) {
     vector<Point> result;
     result.push_back(points[0]);
@@ -79,19 +77,13 @@ vector<Point> deleteRepeatedNeighborPoints(vector<Point> points) {
     return result;
 }
 
-void printPoints(vector<Point> points) {
-    for(Point point: points) {
-        cout << point.x << ";" << point.y << endl;
-    }
-}
-
-
 void showImg(Mat img, String imgName) {
     imshow(imgName, img);
     waitKey(0);
 }
 
-void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false, String imgName = "") {
+void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false,
+               String imgName = "") {
     int size = points.size();
     int end = size;
     if (!joinEnds) {
@@ -112,47 +104,77 @@ void drawPoints(Mat img, vector<Point> points, Scalar color) {
     }
 }
 
-void projection() {
-    Mat img = imread("../satimg.jpg");
+void printPoints(vector<Point> points) {
+    for(Point point: points) {
+        cout << point.x << ";" << point.y << endl;
+    }
+}
+
+void gribovAlgorithm() {
+    Mat img = imread("../oneBuilding.png");
     cout << img.size() << endl;
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
     imshow("Contours", contoursImg);
-    imwrite("../contours.jpg", contoursImg);
+    imwrite("../oneBuildingGrid.jpg", contoursImg);
 
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    Mat simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    cout << contours[0].size() << endl;
 
-    for (int eps = 1; eps <= 4; eps++) {
-        for (size_t i = 0; i < contours.size(); i++) {
-            vector<Point> contour = contours[i];
-            tuple<vector<Point>, bool> simpleResult = doubleContourToSimple(contour);
-            vector<Point> simple = get<0>(simpleResult);
-            bool isSimpled = get<1>(simpleResult);
+    vector<Point> dpContour;
+    // dpContour = myDp::ramerDouglasPeuckerRecr(contours[0], 2);
+    approxPolyDP(contours[0], dpContour, 2, true);
+    printPoints(dpContour);
 
-            vector<Point> result = ramerDouglasPeuckerRecr(simple, eps);
-            result = deleteRepeatedNeighborPoints(result);
+    cout << dpContour.size() << endl;
 
-            int pointsLength = result.size();
-            drawLines(simplContoursImg, result, green, !isSimpled);
-            drawPoints(simplContoursImg, result, blue);
-
-            cout << i << endl;
-            cout << "orig " << contour.size() << " simple " << simple.size() << " dugl " << pointsLength << endl;
-
-        }
-        imshow("Building contours", simplContoursImg);
-        imwrite(format("../ramerDouglasPeucker%d.jpg", eps), simplContoursImg);
-
-        waitKey(0);
-        simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
-    }
-    waitKey(0);
+    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
+    drawLines(gridImg, contours[0], blue);
+    showImg(gridImg, "contour");
+    gridImg = Mat::zeros(img.size(), CV_8UC3);
+    drawLines(gridImg, dpContour, green);
+    showImg(gridImg, "dp contour");
 }
 
+// высчитывает длину перпенидкуляра от точки zero до отрезка first-second через формулу площади треугольника
+double perpendicularLength(Point first, Point second, Point zero) {
+    int triangleArea = abs((first.y - second.y) * zero.x - (first.x - second.x) * zero.y + (first.x * second.y) - (second.x * first.y));
+    double firstSecondLength = sqrt(pow(second.y - first.y, 2) + pow(second.x - first.x, 2));
+    return (double)triangleArea / firstSecondLength;
+}
+
+// рекурсивный Дуглас-Пекер
+vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps) {
+    Point first = polyline[0];
+    Point last = polyline[polyline.size() - 1];
+    double maxDistance = 0;
+    int index = 0;
+    for (int i = 1; i < polyline.size() - 1; i++) {
+        double perpendicular = perpendicularLength(first, last, polyline[i]);
+        if (perpendicular > maxDistance) {
+            maxDistance = perpendicular;
+            index = i;
+        }
+    }
+    if (maxDistance >= eps) {
+        vector<Point> left(&polyline[0], &polyline[index+1]);
+        vector<Point> right(&polyline[index], &polyline[polyline.size()]);
+        vector<Point> leftPolyLine = ramerDouglasPeuckerRecr(left, eps);
+        vector<Point> rightPolyline = ramerDouglasPeuckerRecr(right, eps);
+        leftPolyLine.insert(leftPolyLine.end(), rightPolyline.begin(), rightPolyline.end());
+        return leftPolyLine;
+    } else {
+        vector<Point> result;
+        result.push_back(polyline[0]);
+        result.push_back(polyline[polyline.size() - 1]);
+        return result;
+    }
+}
+
+// как-то неправильно работает
 vector<Point> douglasPeucker(vector<Point> polyline, double eps) {
     stack<Range> stack;
     bool points[polyline.size()];
@@ -192,37 +214,176 @@ vector<Point> douglasPeucker(vector<Point> polyline, double eps) {
     return result;
 }
 
-vector<Point> ramerDouglasPeuckerRecr(vector<Point> polyline, double eps) {
-    Point first = polyline[0];
-    Point last = polyline[polyline.size() - 1];
-    double maxDistance = 0;
-    int index = 0;
-    for (int i = 1; i < polyline.size() - 1; i++) {
-        double perpendicular = perpendicularLength(first, last, polyline[i]);
-        if (perpendicular > maxDistance) {
-            maxDistance = perpendicular;
-            index = i;
-        }
-    }
-    if (maxDistance >= eps) {
-        vector<Point> left(&polyline[0], &polyline[index+1]);
-        vector<Point> right(&polyline[index], &polyline[polyline.size()]);
-        vector<Point> leftPolyLine = ramerDouglasPeuckerRecr(left, eps);
-        vector<Point> rightPolyline = ramerDouglasPeuckerRecr(right, eps);
-        leftPolyLine.insert(leftPolyLine.end(), rightPolyline.begin(), rightPolyline.end());
-        return leftPolyLine;
-    } else {
-        vector<Point> result;
-        result.push_back(polyline[0]);
-        result.push_back(polyline[polyline.size() - 1]);
-        return result;
-    }
+double getLength(Point start, Point end) {
+    return sqrt(pow((end.x - start.x), 2) + pow((end.y - start.y), 2));
 }
 
-double perpendicularLength(Point first, Point second, Point zero) {
-    int triangleArea = abs((first.y - second.y) * zero.x - (first.x - second.x) * zero.y + (first.x * second.y) - (second.x * first.y));
-    double firstSecondLength = sqrt(pow(second.y - first.y, 2) + pow(second.x - first.x, 2));
-    return (double)triangleArea / firstSecondLength;
+Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd, Point point) {
+    double a0 = point.x - lineStart.x;
+    double a1 = lineEnd.x - lineStart.x;
+    double a2 = point.y - lineStart.y;
+    double a3 = lineEnd.y - lineStart.y;
+    double a4 = a0 * a1 + a2 * a3;
+    double a5 = a1 * a1;
+    double a6 = a2 * a2;
+    double a7 = sqrt(a5 + a6);
+    double x = lineStart.x + (a4/a7)*(a1/a7);
+    double y = lineStart.y + (a4/a7)*(a3/a7);
+    return Point(x, y);
+}
+
+vector<double> getSidesLengths(vector<Point> points, bool joinEnds = false) {
+    vector<double> lengths;
+    for (int i = 1; i < points.size(); i++) {
+        Point start = points[i-1];
+        Point end = points[i];
+        double length = getLength(start, end);
+        lengths.push_back(length);
+    }
+    if (joinEnds) {
+        Point start = points[points.size() - 1];
+        Point end = points[0];
+        double length = getLength(start, end);
+        lengths.push_back(length);
+    }
+    return lengths;
+}
+
+void integratedDP() {
+    Mat img = imread("../satimg.jpg");
+
+    Mat contoursImg;
+    Canny(img, contoursImg, 100, 255);
+
+    vector<vector<Point>> contours;
+    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    vector<vector<Point>> dpContours;
+    for (int i = 0; i < contours.size(); i++) {
+        vector<Point> contour = contours[i];
+        vector<Point> dpContour;
+        approxPolyDP(contour, dpContour, 2, false);
+        dpContours.push_back(dpContour);
+        cout << i << "  " << contour.size() << "  " << dpContour.size() << endl;
+    }
+
+    Mat integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    for (int i = 0; i < dpContours.size(); i++) {
+        drawLines(integratedDpContoursImg, dpContours[i], green);
+        drawPoints(integratedDpContoursImg, dpContours[i], red);
+    }
+    imshow("DP", integratedDpContoursImg);
+    waitKey(0);
+}
+
+void projection() {
+    Mat img = imread("../satimg.jpg");
+    cout << img.size() << endl;
+
+    Mat contoursImg;
+    Canny(img, contoursImg, 100, 255);
+    imshow("Contours", contoursImg);
+    imwrite("../contours.jpg", contoursImg);
+
+    vector<vector<Point>> contours;
+    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    Mat simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    Mat integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
+
+    vector<Point> fifteenth = contours[15];
+    fifteenth = get<0>(doubleContourToSingle(fifteenth));
+    tuple<vector<Point>, bool> fifteenthResult = doubleContourToSingle(fifteenth);
+    fifteenth = get<0>(fifteenthResult);
+    bool isSingled = get<1>(fifteenthResult);
+    isSingled = true;
+    fifteenth = ramerDouglasPeuckerRecr(fifteenth, 2);
+    fifteenth = deleteRepeatedNeighborPoints(fifteenth);
+    printPoints(fifteenth);
+    drawLines(simplContoursImg, fifteenth, blue, !isSingled);
+    drawPoints(simplContoursImg, fifteenth, red);
+    imshow("Name", simplContoursImg);
+    waitKey(0);
+    simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    vector<double> lengths = getSidesLengths(fifteenth, isSingled);
+    for (double length: lengths) {
+        cout << length << endl;
+    }
+    int maxElementIndex = max_element(lengths.begin(), lengths.end()) - lengths.begin();
+    cout << maxElementIndex << endl;
+    for (int i = 1; i < fifteenth.size(); i++) {
+        int currentIndex = (maxElementIndex + i + 1) % fifteenth.size();
+        if (isSingled & (currentIndex == 0 || currentIndex == 1)) {
+            continue;
+        } else {
+            Point lineStart = fifteenth[(maxElementIndex + i - 1) % fifteenth.size()];
+            Point lineEnd = fifteenth[(maxElementIndex + i) % fifteenth.size()];
+            Point point = fifteenth[(maxElementIndex + i + 1) % fifteenth.size()];
+            Point newPoint = getIntersectionOfLineAndPointPerpendicular(lineStart, lineEnd, point);
+            fifteenth[(maxElementIndex + i) % fifteenth.size()] = newPoint;
+        }
+    }
+    drawLines(simplContoursImg, fifteenth, blue, !isSingled);
+    drawPoints(simplContoursImg, fifteenth, red);
+    imshow("Name", simplContoursImg);
+    waitKey(0);
+
+    for (int eps = 1; eps <= 4; eps++) {
+        int equals = 0;
+        int myBigger = 0;
+        int mySmaller = 0;
+        int smallerDiff = 0;
+        int biggerDiff = 0;
+        for (size_t i = 0; i < contours.size(); i++) {
+            vector<Point> contour = contours[i];
+            tuple<vector<Point>, bool> singleResult = doubleContourToSingle(contour);
+            vector<Point> singled = get<0>(singleResult);
+            bool isSingled = get<1>(singleResult);
+
+            vector<Point> result = ramerDouglasPeuckerRecr(singled, eps);
+            result = deleteRepeatedNeighborPoints(result);
+
+            int pointsLength = result.size();
+            drawLines(simplContoursImg, result, green, !isSingled);
+            drawPoints(simplContoursImg, result, blue);
+
+            vector<Point> dpContour;
+            approxPolyDP(contour, dpContour, eps, true);
+
+            drawLines(integratedDpContoursImg, dpContour, green );
+            drawPoints(integratedDpContoursImg, dpContour, blue);
+
+            if (dpContour.size() == pointsLength) {
+                equals += 1;
+            } else if (dpContour.size() > pointsLength) {
+                mySmaller += 1;
+                smallerDiff += dpContour.size() - pointsLength;
+            } else if (dpContour.size() < pointsLength) {
+                myBigger += 1;
+                biggerDiff += pointsLength - dpContour.size();
+            }
+
+            cout << i << "  " << contour.size() << "  " << pointsLength << endl;
+            // cout << i << endl;
+            // cout << "orig " << contour.size() << " singled " << singled.size() << " dugl " << pointsLength << endl;
+
+        }
+        cout << "my smaller: " << mySmaller <<
+        " equals: " << equals <<
+        " my bigger: " << myBigger <<
+        " smaller diff " << smallerDiff <<
+        " bigger diff " << biggerDiff << endl;
+        imshow("Building contours", simplContoursImg);
+        imwrite(format("../ramerDouglasPeucker%d.jpg", eps), simplContoursImg);
+
+        imshow("DP", integratedDpContoursImg);
+        imwrite(format("../integreatedDP%d.jpg", eps), integratedDpContoursImg);
+
+        waitKey(0);
+        simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
+        integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
+    }
+    waitKey(0);
 }
 
 void rotatedMinAreaRect() {
@@ -321,77 +482,5 @@ void contours() {
         drawContours(drawing, hull, (int)i, hullColor);
     }
     imshow("Contours", drawing);
-    waitKey(0);
-}
-
-void first() {
-    RNG rng(12345);
-    Mat img = imread("../satimg.jpg");
-    Mat grayImg;
-    cvtColor(img, grayImg, COLOR_BGR2GRAY);
-    Mat cannyOutput;
-    Canny(grayImg, cannyOutput, 100, 255);
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    findContours(cannyOutput, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    Mat drawing = Mat::zeros(cannyOutput.size(), CV_8UC3);
-    for (size_t i = 0; i < contours.size(); i++) {
-        Scalar color = Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256));
-        drawContours(drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0);
-    }
-    imshow("Contours", drawing);
-    waitKey(0);
-}
-
-void sobelFunc() {
-    Mat img = imread("../satimg.jpg");
-    Mat sobelX;
-    Mat sobelY;
-    Mat sobel;
-    // Scharr(img, sobelX, CV_16S, 1, 0, 3);
-    // Scharr(img, sobelY, CV_16S, 0, 1, 3);
-    Sobel(img, sobelX, CV_16S, 1, 0);
-    Sobel(img, sobelY, CV_16S, 0, 1);
-    // Mat norm , dir;
-    // cartToPolar(sobelX, sobelY, norm, dir);
-    sobel = abs(sobelX) + abs(sobelY);
-    imshow("X", sobelX);
-    imshow("Y", sobelY);
-    imshow("Sobel", sobel);
-    waitKey(0);
-}
-
-void cannyFunc() {
-    Mat img = imread("../satimg.jpg");
-    Mat contours;
-    Canny(img, contours, 125, 350);
-    imshow("Contours", contours);
-    imshow("Original", img);
-    waitKey(0);
-}
-
-void houghFunc() {
-    Mat img = imread("../satimg.jpg");
-    Mat contours, contours2;
-    Canny(img, contours, 125, 350);
-    cvtColor(contours, contours2, COLOR_GRAY2BGR);
-
-    vector<Vec2f> lines;
-    HoughLines(contours, lines, 1, CV_PI/180, 100, 0, 0 );
-
-    for( size_t i = 0; i < lines.size(); i++ )
-    {
-        float rho = lines[i][0], theta = lines[i][1];
-        Point pt1, pt2;
-        double a = cos(theta), b = sin(theta);
-        double x0 = a*rho, y0 = b*rho;
-        pt1.x = cvRound(x0 + 1000*(-b));
-        pt1.y = cvRound(y0 + 1000*(a));
-        pt2.x = cvRound(x0 - 1000*(-b));
-        pt2.y = cvRound(y0 - 1000*(a));
-        line(contours2, pt1, pt2, Scalar(0,0,255), 1);
-    }
-
-    imshow("Contours", contours2);
     waitKey(0);
 }
