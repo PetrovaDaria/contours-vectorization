@@ -10,8 +10,8 @@ void showImg(Mat img, String imgName) {
     waitKey(0);
 }
 
-void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false,
-               String imgName = "") {
+void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds, bool isShowImg,
+               String imgName) {
     int size = points.size();
     int end = size;
     if (!joinEnds) {

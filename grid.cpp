@@ -5,9 +5,9 @@
 #include <iostream>
 #include "grid.h"
 
-Scalar red2(Scalar(0, 0, 255));
-Scalar green2(Scalar(0, 255, 0));
-Scalar blue2(Scalar(255, 0, 0));
+extern Scalar red;
+extern Scalar green;
+extern Scalar blue;
 
 // пока что на примере картинки с одним контуром реализую алгоритм Грибова
 void gribovAlgorithm() {
@@ -32,10 +32,11 @@ void gribovAlgorithm() {
     int gridIntervalX = 3;
     int gridIntervalY = 3;
 
-    drawGrid(gridStartX, gridStartY, gridIntervalX, gridIntervalY, gridImg, blue2);
-    drawLines(gridImg, dpContour, green2);
-    drawPoints(gridImg, dpContour, red2);
-    showImg(gridImg, "dp contour");
+    // тут просто по фану рисуется сетка
+//    drawGrid(gridStartX, gridStartY, gridIntervalX, gridIntervalY, gridImg, blue2);
+//    drawLines(gridImg, dpContour, green2);
+//    drawPoints(gridImg, dpContour, red2);
+//    showImg(gridImg, "dp contour");
 
     double rotationAngle = getRotationAngleInDeg(dpContour);
 
@@ -48,10 +49,10 @@ void gribovAlgorithm() {
         rotatedContour.push_back(rotatedPoint);
         Point nearestGridPoint = getNearestGridPoint(rotatedPoint, gridStartX, gridStartY, gridIntervalX, gridIntervalY);
         vector<Point> neighborPoints = getAuxilaryGridPoints(nearestGridPoint, gridIntervalX, gridIntervalY);
-        drawPoints(rotatedContourImg, neighborPoints, blue2);
+        drawPoints(rotatedContourImg, neighborPoints, blue);
     }
-    drawLines(rotatedContourImg, dpContour, green2);
-    drawLines(rotatedContourImg, rotatedContour, red2);
+    drawLines(rotatedContourImg, dpContour, green);
+    drawLines(rotatedContourImg, rotatedContour, red);
     drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
     showImg(rotatedContourImg, "rotated");
 }
@@ -167,4 +168,5 @@ double getPCAAngle() {
 //    // Искомый угол.
 //    double angle = atan2(eigen_vecs[0].y, eigen_vecs[0].x);
 //    cout << angle << endl;
+    return 0;
 }

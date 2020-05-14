@@ -13,8 +13,8 @@ using namespace std;
 
 void showImg(cv::Mat img, cv::String imgName);
 
-void drawLines(cv::Mat img, std::vector<cv::Point> points, cv::Scalar color, bool joinEnds, bool isShowImg,
-               cv::String imgName);
+void drawLines(cv::Mat img, std::vector<cv::Point> points, cv::Scalar color, bool joinEnds = true, bool isShowImg = false,
+               String imgName = "");
 
 void drawPoints(cv::Mat img, std::vector<cv::Point> points, cv::Scalar color);
 
