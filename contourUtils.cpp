@@ -2,9 +2,8 @@
 // Created by Dariya Petrova on 11.05.2020.
 //
 
+
 #include "contourUtils.h"
-using namespace cv;
-using namespace std;
 
 // двойной контур, в котором дважды повторяются точки и у которого начало где-то не в начале, переводит в одиночный
 // актуально для незамкнутых контуров
