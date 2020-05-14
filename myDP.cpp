@@ -1,9 +1,8 @@
 //
 // Created by Dariya Petrova on 11.05.2020.
 //
+#include <stack>
 #include "myDP.h"
-using namespace std;
-using namespace cv;
 
 // высчитывает длину перпенидкуляра от точки zero до отрезка first-second через формулу площади треугольника
 double perpendicularLength(Point first, Point second, Point zero) {

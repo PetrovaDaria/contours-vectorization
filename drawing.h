@@ -3,8 +3,19 @@
 //
 
 #pragma once
-void showImg(Mat img, String imgName);
-void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false,
+
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
+using namespace cv;
+using namespace std;
+
+void showImg(cv::Mat img, cv::String imgName);
+
+void drawLines(cv::Mat img, std::vector<cv::Point> points, cv::Scalar color, bool joinEnds = true, bool isShowImg = false,
                String imgName = "");
-void drawPoints(Mat img, vector<Point> points, Scalar color);
-void printPoints(vector<Point> points);
+
+void drawPoints(cv::Mat img, std::vector<cv::Point> points, cv::Scalar color);
+
+void printPoints(std::vector<cv::Point> points);

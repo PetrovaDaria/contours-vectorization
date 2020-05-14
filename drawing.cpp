@@ -2,19 +2,16 @@
 // Created by Dariya Petrova on 11.05.2020.
 //
 
+#include <iostream>
 #include "drawing.h"
-
-using namespace cv;
-using namespace std;
-
 
 void showImg(Mat img, String imgName) {
     imshow(imgName, img);
     waitKey(0);
 }
 
-void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds = true, bool isShowImg = false,
-               String imgName = "") {
+void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds, bool isShowImg,
+               String imgName) {
     int size = points.size();
     int end = size;
     if (!joinEnds) {
@@ -36,7 +33,7 @@ void drawPoints(Mat img, vector<Point> points, Scalar color) {
 }
 
 void printPoints(vector<Point> points) {
-    for(Point point: points) {
+    for (Point point: points) {
         cout << point.x << ";" << point.y << endl;
     }
 }
