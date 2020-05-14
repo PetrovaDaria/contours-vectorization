@@ -111,8 +111,11 @@ void printPoints(vector<Point> points) {
 }
 
 void gribovAlgorithm() {
-    Mat img = imread("../oneBuilding.png");
+    Mat img = imread("../oneBuilding.jpeg");
     cout << img.size() << endl;
+
+    int imgWidth = img.cols;
+    int imgHeight = img.rows;
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
@@ -125,18 +128,128 @@ void gribovAlgorithm() {
     cout << contours[0].size() << endl;
 
     vector<Point> dpContour;
-    // dpContour = myDp::ramerDouglasPeuckerRecr(contours[0], 2);
-    approxPolyDP(contours[0], dpContour, 2, true);
-    printPoints(dpContour);
+    approxPolyDP(contours[0], dpContour, 3, true);
 
     cout << dpContour.size() << endl;
 
     Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
+    Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+
     drawLines(gridImg, contours[0], blue);
     showImg(gridImg, "contour");
     gridImg = Mat::zeros(img.size(), CV_8UC3);
+
+    int gridStartX = 0;
+    int gridStartY = 0;
+    int gridIntervalX = 3;
+    int gridIntervalY = 3;
+
+    vector<Point> gridPoints;
+    for (int x = gridStartX; x < imgWidth; x += gridIntervalX) {
+        for (int y = gridStartY; y < imgHeight; y += gridIntervalY) {
+            gridPoints.push_back(Point(x, y));
+        }
+    }
+
+    drawPoints(gridImg, gridPoints, blue);
     drawLines(gridImg, dpContour, green);
+    drawPoints(gridImg, dpContour, red);
     showImg(gridImg, "dp contour");
+
+    RotatedRect rect = minAreaRect(dpContour);
+    double rotationAngle = rect.angle;
+    cout << rotationAngle << endl;
+
+//    // поворот
+//    Mat pts_mat(dpContour.size(), 2, CV_64FC1);
+//    for (int j = 0; j < pts_mat.rows; ++j) {
+//        pts_mat.at<double>(j,0) = dpContour[j].x;
+//        pts_mat.at<double>(j,1) = dpContour[j].y;
+//    }
+//
+//    PCA pca(pts_mat, Mat(), PCA::DATA_AS_ROW);
+//
+//    // В отдельный вектор выносим собственные вектора,
+//    // полученные при помощи PCA.
+//    vector<Point2d> eigen_vecs(2);
+//    vector<double> eigen_val(2);
+//    for(int j = 0; j < 2; ++j) {
+//        eigen_vecs[j] = Point2d(pca.eigenvectors.at<double>(j,0), pca.eigenvectors.at<double>(j,1));
+//        eigen_val[j] = pca.eigenvalues.at<double>(0, j);
+//    }
+//
+//    Point pos = Point(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
+//    line(rotatedContourImg, pos, pos + 0.02 * Point(eigen_vecs[0].x * eigen_val[0], eigen_vecs[0].y * eigen_val[0]) , CV_RGB(255, 255, 0));
+//    line(rotatedContourImg, pos, pos + 0.02 * Point(eigen_vecs[1].x * eigen_val[1], eigen_vecs[1].y * eigen_val[1]) , CV_RGB(0, 255, 255));
+//
+//    drawLines(rotatedContourImg, dpContour, green);
+//
+//    // Искомый угол.
+//    double angle = atan2(eigen_vecs[0].y, eigen_vecs[0].x);
+//    cout << angle << endl;
+
+    Moments cntMoments = moments(dpContour);
+    double centerX = cntMoments.m10 / cntMoments.m00;
+    double centerY = cntMoments.m01 / cntMoments.m00;
+    Point centroid = Point(centerX, centerY);
+    vector<Point> centerPoints;
+    centerPoints.push_back(centroid);
+    drawPoints(rotatedContourImg, centerPoints, Scalar(255, 255, 0));
+    // double rotationAngle = 90;
+    vector<Point> rotatedContour;
+    for (Point point: dpContour) {
+        Point centeredPoint = point - centroid;
+        double phi = atan2(centeredPoint.y, centeredPoint.x);
+        double rho = sqrt(centeredPoint.x * centeredPoint.x + centeredPoint.y * centeredPoint.y);
+         double phiInDeg = phi * 180 / M_PI;
+         // double newAngle = (int)(phiInDeg + rotationAngle) % 360;
+         double newAngle = phiInDeg - rotationAngle;
+         double newAngleInRad = newAngle / 180 * M_PI;
+        // double newAngleInRad = phi - angle;
+        int x = rho * cos(newAngleInRad);
+        int y = rho * sin(newAngleInRad);
+        cout << "Phi " << phi << endl;
+//        cout << "Phi in deg " << phiInDeg << endl;
+//        cout << "Rotated angle " << newAngle << endl;
+        cout << "New angle in rad " << newAngleInRad << endl;
+        cout << "Centered point " << centeredPoint << endl;
+        Point rotatedPoint = Point(x, y);
+        cout << "Rotated point " << rotatedPoint << endl;
+        Point inPlacePoint = rotatedPoint + centroid;
+        cout << "Old " << point.x << " " << point.y << endl;
+        cout << "New " << inPlacePoint.x << " " << inPlacePoint.y << endl;
+        rotatedContour.push_back(inPlacePoint);
+        int dist_x = (inPlacePoint.x-gridStartX) % gridIntervalX;
+        int dist_y = (inPlacePoint.y-gridStartY) % gridIntervalY;
+        int near_x;
+        int near_y;
+        if (dist_x < gridIntervalX / 2.0) {
+            near_x = inPlacePoint.x - dist_x;
+        } else {
+            near_x = inPlacePoint.x + (gridIntervalX - dist_x);
+        }
+        if (dist_y < gridIntervalY / 2.0) {
+            near_y = inPlacePoint.y - dist_y;
+        } else {
+            near_y = inPlacePoint.y + (gridIntervalY - dist_y);
+        }
+        Point nearGridPoint = Point(near_x, near_y);
+        vector<Point> neighborPoints;
+        neighborPoints.push_back(nearGridPoint);
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                neighborPoints.push_back(Point(near_x + i * gridIntervalX, near_y + j * gridIntervalY));
+            }
+        }
+        drawPoints(rotatedContourImg, neighborPoints, blue);
+        cout << "Point " << inPlacePoint << endl;
+        cout << "Dist " << dist_x << " " << dist_y << endl;
+        cout << "Near grid point " << nearGridPoint << endl;
+    }
+    drawLines(rotatedContourImg, dpContour, green);
+    drawLines(rotatedContourImg, rotatedContour, red);
+    drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
+    showImg(rotatedContourImg, "rotated");
 }
 
 // высчитывает длину перпенидкуляра от точки zero до отрезка first-second через формулу площади треугольника
@@ -392,7 +505,7 @@ void rotatedMinAreaRect() {
     cvtColor(img, grayImg, COLOR_BGR2GRAY);
     Canny(grayImg, cannyOutput, 100, 255);
     vector<vector<Point>> contours;
-    findContours(cannyOutput, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(cannyOutput, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
     vector<vector<Point>> hull(contours.size());
     for (size_t i = 0; i < contours.size(); i++) {
         convexHull(contours[i], hull[i]);
@@ -404,15 +517,34 @@ void rotatedMinAreaRect() {
     cout << contours.size();
     for (size_t i = 0; i < contours.size(); i++) {
         vector<Point> contour = contours[i];
-        RotatedRect boundRect = minAreaRect(contour);
+        RotatedRect minRect = minAreaRect(contour);
+        Rect boundRect = boundingRect(contour);
+        int left = boundRect.x;
+        int top = boundRect.y;
+        int width = boundRect.width;
+        int height = boundRect.height;
+        int x_end = left + width;
+        int y_end = top + height;
+        int cntArea = 0;
+        for (int x = left; x < x_end; x++)
+        {
+            for (int y = top; y < y_end; y++)
+            {
+                double test = pointPolygonTest(contour, Point2f(x, y), false);
+                if (test == 1 || test == 0) {
+                    cntArea += 1;
+                }
+            }
+        }
+        cout << i << endl;
         cout << "Contour size " << contour.size() << endl;
-        cout << "Contour area " << contourArea(contour) << endl;
-        cout << "Rect area " << boundRect.size.area() << endl;
+        cout << "Contour moment area " << moments(contour).m00 << endl;
+        cout << "Contour area " << cntArea << endl;
+        cout << "Rect size " << minRect.size << endl;
+        cout << "Rect area " << minRect.size.area() << endl;
         Point2f rectPoints[4];
-        boundRect.points(rectPoints);
+        minRect.points(rectPoints);
         drawContours(drawing, contours, (int)i, contourColor);
-        char buffer[100] = {};
-        sprintf(buffer, "%f %f", contourArea(contour), boundRect.size.area());
         for ( int j = 0; j < 4; j++ )
         {
             line( drawing, rectPoints[j], rectPoints[(j+1)%4], rectColor );
