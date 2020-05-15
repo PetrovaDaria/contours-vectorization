@@ -23,4 +23,6 @@ Point getNearestGridPoint(Point point, int startX, int startY, int intervalX, in
 vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int intervalY);
 int getNearestCoord(int pointCoord, int gridInterval, int gridStart);
 Point getRotatedPoint(Point point, Point centroid, double rotationAngle);
+double getAngleBetweenSegments(Point point1, Point point2, Point point3);
+double getArea(Point point1, Point point2, Point auxPoint1, Point auxPoint2);
 double getPCAAngle();
