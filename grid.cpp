@@ -10,11 +10,12 @@
 extern Scalar red;
 extern Scalar green;
 extern Scalar blue;
+extern Scalar pink;
 
 // пока что на примере картинки с одним контуром реализую алгоритм Грибова
 void gribovAlgorithm() {
     // Mat img = imread("../oneBuilding.jpeg");
-    Mat img = imread("../oneBuilding.jpeg");
+    Mat img = imread("../oneBuilding3.jpg");
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
@@ -58,7 +59,7 @@ void gribovAlgorithm() {
         drawPoints(rotatedContourImg, neighborPoints, blue);
     }
     drawLines(rotatedContourImg, dpContour, green);
-    drawLines(rotatedContourImg, rotatedContour, red);
+    // drawLines(rotatedContourImg, rotatedContour, red);
     drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
 
     vector<vector<int>> sc;
@@ -204,42 +205,12 @@ void gribovAlgorithm() {
         currentAuxIndex = prevCoord.second;
     }
 
-    drawLines(rotatedContourImg, rightContour, Scalar(255, 0, 255));
+    // drawLines(rotatedContourImg, rightContour, pink);
 
-//    double minArea = 10000000;
-//    pair<Point, Point> bestPair;
-//    for (int j = 0; j < 9; j++) {
-//        for (int k = 0; k < 9; k++) {
-//            Mat cloned = rotatedContourImg.clone();
-//            vector<Point> newContour;
-//            newContour.push_back(auxilaryPoints[rotatedContour[0]][j]);
-//            newContour.push_back(auxilaryPoints[rotatedContour[1]][k]);
-//            newContour.push_back(rotatedContour[1]);
-//            newContour.push_back(rotatedContour[0]);
-//            double newContourArea = contourArea(newContour);
-//            if (newContourArea < minArea) {
-//                minArea = newContourArea;
-//                bestPair = make_pair(auxilaryPoints[rotatedContour[0]][j], auxilaryPoints[rotatedContour[1]][k]);
-//            }
-//            cout << auxilaryPoints[rotatedContour[0]][j] << " " << auxilaryPoints[rotatedContour[1]][k] << " " << newContourArea << endl;
-//            line(cloned, auxilaryPoints[rotatedContour[0]][j], auxilaryPoints[rotatedContour[1]][k], Scalar(255, 0, 255));
-//            RotatedRect rect = minAreaRect(newContour);
-//            Point2f rectPoints[4];
-//            rect.points(rectPoints);
-//            for (int l = 0; l < 4; l++ )
-//            {
-//                line(cloned, rectPoints[l], rectPoints[(l+1)%4], Scalar(0, 255, 255));
-//            }
-//            // drawLines(cloned, newContour, Scalar(255, 0, 255));
-//            showImg(cloned, "rotated");
-//        }
-//    }
-//
-//    cout << "best " << bestPair.first << " " << bestPair.second << " " << minArea << endl;
-//    line(rotatedContourImg, bestPair.first, bestPair.second, Scalar(255, 0, 255));
-//    cout << getAngleBetweenSegments(rotatedContour[0], rotatedContour[1], rotatedContour[2]) << endl;
+    vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
+    drawLines(rotatedContourImg, rightRotatedContour, pink);
     showImg(rotatedContourImg, "rotated");
-    imwrite("../result3.jpg", rotatedContourImg);
+    imwrite("../grid3.jpg", rotatedContourImg);
 }
 
 void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Scalar color) {
@@ -252,40 +223,6 @@ void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Sca
         }
     }
     drawPoints(img, gridPoints, color);
-}
-
-double getRotationAngleInDeg(vector<Point> contour) {
-    RotatedRect rect = minAreaRect(contour);
-    return rect.angle;
-}
-
-Point getCentroidPoint(vector<Point> contour) {
-    Moments cntMoments = moments(contour);
-    double centerX = cntMoments.m10 / cntMoments.m00;
-    double centerY = cntMoments.m01 / cntMoments.m00;
-    return Point(centerX, centerY);
-}
-
-double getPolarAngle(Point point) {
-    return atan2(point.y,point.x);
-}
-
-double getPolarRadius(Point point) {
-    return sqrt(point.x * point.x + point.y * point.y);
-}
-
-double fromDegToRad(double angleInDeg) {
-    return angleInDeg / 180 * M_PI;
-}
-
-double fromRadToDeg(double angleInRad) {
-    return angleInRad * 180 / M_PI;
-}
-
-Point fromPolarToDecart(double angleInRad, double radius) {
-    int x = radius * cos(angleInRad);
-    int y = radius * sin(angleInRad);
-    return Point(x, y);
 }
 
 Point getNearestGridPoint(Point point, int startX, int startY, int intervalX, int intervalY) {
@@ -310,18 +247,6 @@ vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int interv
         }
     }
     return neighborPoints;
-}
-
-Point getRotatedPoint(Point point, Point centroid, double rotationAngle) {
-    Point centeredPoint = point - centroid;
-    double phi = getPolarAngle(centeredPoint);
-    double rho = getPolarRadius(centeredPoint);
-    double phiInDeg = fromRadToDeg(phi);
-    double newAngleInDeg = phiInDeg - rotationAngle;
-    double newAngleInRad = fromDegToRad(newAngleInDeg);
-    Point rotatedPoint = fromPolarToDecart(newAngleInRad, rho);
-    Point inPlacePoint = rotatedPoint + centroid;
-    return inPlacePoint;
 }
 
 double getAngleBetweenSegments(Point point1, Point point2, Point point3) {
