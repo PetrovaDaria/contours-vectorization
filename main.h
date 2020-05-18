@@ -12,12 +12,14 @@
 #include "drawing.cpp"
 #include "grid.cpp"
 #include "myDP.cpp"
+#include "projection.cpp"
+#include "rotation.cpp"
 
 using namespace cv;
 using namespace std;
 
 int main();
-double getLength(Point start, Point end);
+double getSegmentLength(Point start, Point end);
 Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd, Point point);
 vector<double> getSidesLengths(vector<Point> points, bool joinEnds);
 void integratedDP();

@@ -9,6 +9,7 @@
 #include <opencv2/highgui.hpp>
 
 #include "drawing.h"
+#include "rotation.h"
 
 struct comparePoints {
     bool operator () (cv::Point const& a, cv::Point const& b) const
@@ -19,17 +20,9 @@ struct comparePoints {
 
 void gribovAlgorithm();
 void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Scalar color);
-double getRotationAngleInDeg(vector<Point> contour);
-Point getCentroidPoint(vector<Point> contour);
-double getPolarAngle(Point point);
-double getPolarRadius(Point point);
-double fromDegToRad(double angleInDeg);
-double fromRadToDeg(double angleInRad);
-Point fromPolarToDecart(double angleInRad, double radius);
 Point getNearestGridPoint(Point point, int startX, int startY, int intervalX, int intervalY);
 vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int intervalY);
 int getNearestCoord(int pointCoord, int gridInterval, int gridStart);
-Point getRotatedPoint(Point point, Point centroid, double rotationAngle);
 double getAngleBetweenSegments(Point point1, Point point2, Point point3);
 double getArea(vector<Point> contour);
 Point getPrevPoint(int pointNum, int auxNum, vector<Point> contour,

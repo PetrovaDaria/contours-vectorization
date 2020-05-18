@@ -6,16 +6,14 @@
 Scalar red(Scalar(0, 0, 255));
 Scalar green(Scalar(0, 255, 0));
 Scalar blue(Scalar(255, 0, 0));
+Scalar pink(Scalar(255, 0, 255));
 
 int main() {
-    gribovAlgorithm();
+    projection();
+    // gribovAlgorithm();
     // rotatedMinAreaRect();
     // !!! projection();
     // integratedDP();
-}
-
-double getLength(Point start, Point end) {
-    return sqrt(pow((end.x - start.x), 2) + pow((end.y - start.y), 2));
 }
 
 Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd, Point point) {
@@ -30,23 +28,6 @@ Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd,
     double x = lineStart.x + (a4/a7)*(a1/a7);
     double y = lineStart.y + (a4/a7)*(a3/a7);
     return Point(x, y);
-}
-
-vector<double> getSidesLengths(vector<Point> points, bool joinEnds = false) {
-    vector<double> lengths;
-    for (int i = 1; i < points.size(); i++) {
-        Point start = points[i-1];
-        Point end = points[i];
-        double length = getLength(start, end);
-        lengths.push_back(length);
-    }
-    if (joinEnds) {
-        Point start = points[points.size() - 1];
-        Point end = points[0];
-        double length = getLength(start, end);
-        lengths.push_back(length);
-    }
-    return lengths;
 }
 
 void integratedDP() {
@@ -73,116 +54,6 @@ void integratedDP() {
         drawPoints(integratedDpContoursImg, dpContours[i], red);
     }
     imshow("DP", integratedDpContoursImg);
-    waitKey(0);
-}
-
-void projection() {
-    Mat img = imread("../satimg.jpg");
-    cout << img.size() << endl;
-
-    Mat contoursImg;
-    Canny(img, contoursImg, 100, 255);
-    imshow("Contours", contoursImg);
-    imwrite("../contours.jpg", contoursImg);
-
-    vector<vector<Point>> contours;
-    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-    Mat simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
-    Mat integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
-
-    vector<Point> fifteenth = contours[15];
-    fifteenth = get<0>(doubleContourToSingle(fifteenth));
-    tuple<vector<Point>, bool> fifteenthResult = doubleContourToSingle(fifteenth);
-    fifteenth = get<0>(fifteenthResult);
-    bool isSingled = get<1>(fifteenthResult);
-    isSingled = true;
-    fifteenth = ramerDouglasPeuckerRecr(fifteenth, 2);
-    fifteenth = deleteRepeatedNeighborPoints(fifteenth);
-    printPoints(fifteenth);
-    drawLines(simplContoursImg, fifteenth, blue, !isSingled);
-    drawPoints(simplContoursImg, fifteenth, red);
-    imshow("Name", simplContoursImg);
-    waitKey(0);
-    simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
-    vector<double> lengths = getSidesLengths(fifteenth, isSingled);
-    for (double length: lengths) {
-        cout << length << endl;
-    }
-    int maxElementIndex = max_element(lengths.begin(), lengths.end()) - lengths.begin();
-    cout << maxElementIndex << endl;
-    for (int i = 1; i < fifteenth.size(); i++) {
-        int currentIndex = (maxElementIndex + i + 1) % fifteenth.size();
-        if (isSingled & (currentIndex == 0 || currentIndex == 1)) {
-            continue;
-        } else {
-            Point lineStart = fifteenth[(maxElementIndex + i - 1) % fifteenth.size()];
-            Point lineEnd = fifteenth[(maxElementIndex + i) % fifteenth.size()];
-            Point point = fifteenth[(maxElementIndex + i + 1) % fifteenth.size()];
-            Point newPoint = getIntersectionOfLineAndPointPerpendicular(lineStart, lineEnd, point);
-            fifteenth[(maxElementIndex + i) % fifteenth.size()] = newPoint;
-        }
-    }
-    drawLines(simplContoursImg, fifteenth, blue, !isSingled);
-    drawPoints(simplContoursImg, fifteenth, red);
-    imshow("Name", simplContoursImg);
-    waitKey(0);
-
-    for (int eps = 1; eps <= 4; eps++) {
-        int equals = 0;
-        int myBigger = 0;
-        int mySmaller = 0;
-        int smallerDiff = 0;
-        int biggerDiff = 0;
-        for (size_t i = 0; i < contours.size(); i++) {
-            vector<Point> contour = contours[i];
-            tuple<vector<Point>, bool> singleResult = doubleContourToSingle(contour);
-            vector<Point> singled = get<0>(singleResult);
-            bool isSingled = get<1>(singleResult);
-
-            vector<Point> result = ramerDouglasPeuckerRecr(singled, eps);
-            result = deleteRepeatedNeighborPoints(result);
-
-            int pointsLength = result.size();
-            drawLines(simplContoursImg, result, green, !isSingled);
-            drawPoints(simplContoursImg, result, blue);
-
-            vector<Point> dpContour;
-            approxPolyDP(contour, dpContour, eps, true);
-
-            drawLines(integratedDpContoursImg, dpContour, green );
-            drawPoints(integratedDpContoursImg, dpContour, blue);
-
-            if (dpContour.size() == pointsLength) {
-                equals += 1;
-            } else if (dpContour.size() > pointsLength) {
-                mySmaller += 1;
-                smallerDiff += dpContour.size() - pointsLength;
-            } else if (dpContour.size() < pointsLength) {
-                myBigger += 1;
-                biggerDiff += pointsLength - dpContour.size();
-            }
-
-            cout << i << "  " << contour.size() << "  " << pointsLength << endl;
-            // cout << i << endl;
-            // cout << "orig " << contour.size() << " singled " << singled.size() << " dugl " << pointsLength << endl;
-
-        }
-        cout << "my smaller: " << mySmaller <<
-        " equals: " << equals <<
-        " my bigger: " << myBigger <<
-        " smaller diff " << smallerDiff <<
-        " bigger diff " << biggerDiff << endl;
-        imshow("Building contours", simplContoursImg);
-        imwrite(format("../ramerDouglasPeucker%d.jpg", eps), simplContoursImg);
-
-        imshow("DP", integratedDpContoursImg);
-        imwrite(format("../integreatedDP%d.jpg", eps), integratedDpContoursImg);
-
-        waitKey(0);
-        simplContoursImg = Mat::zeros(img.size(), CV_8UC3);
-        integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
-    }
     waitKey(0);
 }
 
