@@ -13,12 +13,13 @@ extern Scalar blue;
 
 // пока что на примере картинки с одним контуром реализую алгоритм Грибова
 void gribovAlgorithm() {
+    // Mat img = imread("../oneBuilding.jpeg");
     Mat img = imread("../oneBuilding.jpeg");
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
-    imshow("Contours", contoursImg);
-    imwrite("../oneBuildingGrid.jpg", contoursImg);
+//    imshow("Contours", contoursImg);
+//    imwrite("../oneBuildingGrid.jpg", contoursImg);
 
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
@@ -82,7 +83,9 @@ void gribovAlgorithm() {
     int prevPointsCount = 3;
 
     for (int pointNum = 1; pointNum <= n; pointNum++) {
-        Point currentPoint = rotatedContour[pointNum];
+        int pointNumMod = pointNum % n; //
+        // Point currentPoint = rotatedContour[pointNum];
+        Point currentPoint = rotatedContour[pointNumMod];
         tempSC.clear();
         tempDA.clear();
         tempBPP.clear();
@@ -124,9 +127,15 @@ void gribovAlgorithm() {
             tempDA.push_back(minArea);
             tempBPP.push_back(bestPoint);
         }
-        sc.push_back(tempSC);
-        da.push_back(tempDA);
-        bpp.push_back(tempBPP);
+        if (pointNum == n) {
+            sc[0] = tempSC;
+            da[0] = tempDA;
+            bpp[0] = tempBPP;
+        } else {
+            sc.push_back(tempSC);
+            da.push_back(tempDA);
+            bpp.push_back(tempBPP);
+        }
     }
 
     // тут нужно соединить последнее и первое
@@ -184,13 +193,13 @@ void gribovAlgorithm() {
     int currentPointIndex = lastIndex;
     int currentAuxIndex = bestAuxIndex;
 
-    while (currentPointIndex > 0) {
-        if (currentPointIndex == 0) {
-
-        }
+    while (true) {
         Point currentPoint = auxilaryPoints[rotatedContour[currentPointIndex]][currentAuxIndex];
         rightContour.push_back(currentPoint);
         pair<int, int> prevCoord = bpp[currentPointIndex][currentAuxIndex];
+        if (currentPointIndex == 0) {
+            break;
+        }
         currentPointIndex = prevCoord.first;
         currentAuxIndex = prevCoord.second;
     }
