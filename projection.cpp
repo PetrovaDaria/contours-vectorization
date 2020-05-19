@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <fstream>
 #include "projection.h"
 
 extern Scalar red;
@@ -12,7 +13,13 @@ extern Scalar blue;
 extern Scalar pink;
 
 void projection() {
-    Mat img = imread("../oneBuilding3.jpg");
+    ofstream out;
+    out.open("../projectionParameters.txt");
+
+    Mat img = imread("../oneBuilding.jpeg");
+
+    out << img.cols << endl;
+    out << img.rows << endl;
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
@@ -20,8 +27,18 @@ void projection() {
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
+    out << contours.size() << endl;
+
+    vector<Point> contour  = contours[0];
+
+    out << contour.size() << endl;
+
+    for (Point point: contour) {
+        out << point.x << " " << point.y << endl;
+    }
+
     vector<Point> dpContour;
-    approxPolyDP(contours[0], dpContour, 3, true);
+    approxPolyDP(contour, dpContour, 3, true);
 
     Mat projectionImg = Mat::zeros(img.size(), CV_8UC3);
     drawLines(projectionImg, dpContour, green);
@@ -53,10 +70,20 @@ void projection() {
     }
 
     vector<Point> newContourRotated = rotateContour(newContour, -rotationAngle);
+
+    out << newContourRotated.size() << endl;
+
+    for (Point point: newContourRotated) {
+        out << point.x << " " << point.y << endl;
+    }
+
     drawLines(projectionImg, newContourRotated, pink);
     // drawLines(projectionImg, newContour, pink);
+
+    out.close();
+
     showImg(projectionImg, "Projection");
-    imwrite("../projection3.jpg", projectionImg);
+    imwrite("../projection.jpg", projectionImg);
 }
 
 double getSegmentLength(Point start, Point end) {

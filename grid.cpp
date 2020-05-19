@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <fstream>
 #include "grid.h"
 
 extern Scalar red;
@@ -14,56 +15,63 @@ extern Scalar pink;
 
 // пока что на примере картинки с одним контуром реализую алгоритм Грибова
 void gribovAlgorithm() {
-    // Mat img = imread("../oneBuilding.jpeg");
-    Mat img = imread("../oneBuilding3.jpg");
+    ofstream out;
+    out.open("../gridParameters.txt");
+
+    Mat img = imread("../oneBuilding2.jpg");
+
+    out << img.cols << endl;
+    out << img.rows << endl;
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
-//    imshow("Contours", contoursImg);
-//    imwrite("../oneBuildingGrid.jpg", contoursImg);
 
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
+    out << contours.size() << endl;
+
+    vector<Point> contour  = contours[0];
+
+    out << contour.size() << endl;
+
+    for (Point point: contour) {
+        out << point.x << " " << point.y << endl;
+    }
+
     vector<Point> dpContour;
-    approxPolyDP(contours[0], dpContour, 3, true);
+    approxPolyDP(contour, dpContour, 3, true);
 
     Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
     Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+
+    drawLines(rotatedContourImg, dpContour, green);
 
     int gridStartX = 0;
     int gridStartY = 0;
     int gridIntervalX = 3;
     int gridIntervalY = 3;
 
-    // тут просто по фану рисуется сетка
-//    drawGrid(gridStartX, gridStartY, gridIntervalX, gridIntervalY, gridImg, blue2);
-//    drawLines(gridImg, dpContour, green2);
-//    drawPoints(gridImg, dpContour, red2);
-//    showImg(gridImg, "dp contour");
-
     double rotationAngle = getRotationAngleInDeg(dpContour);
 
-    Point centroid = getCentroidPoint(dpContour);
+    vector<Point> rotatedContour = rotateContour(dpContour, rotationAngle);
 
-    vector<Point> rotatedContour;
+    drawLines(rotatedContourImg, rotatedContour, red);
 
     map<Point, vector<Point>, comparePoints> auxilaryPoints;
 
-    for (const Point& point: dpContour) {
-        Point rotatedPoint = getRotatedPoint(point, centroid, rotationAngle);
-        rotatedContour.push_back(rotatedPoint);
+    for (const Point& rotatedPoint: rotatedContour) {
         Point nearestGridPoint = getNearestGridPoint(rotatedPoint, gridStartX, gridStartY, gridIntervalX, gridIntervalY);
         vector<Point> neighborPoints = getAuxilaryGridPoints(nearestGridPoint, gridIntervalX, gridIntervalY);
         auxilaryPoints[rotatedPoint] = neighborPoints;
         drawPoints(rotatedContourImg, neighborPoints, blue);
     }
-    drawLines(rotatedContourImg, dpContour, green);
-    // drawLines(rotatedContourImg, rotatedContour, red);
+
     drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
 
     vector<vector<int>> sc;
     vector<vector<int>> da;
+    // pair int-int - номер предыдущей точки контура и номер ее вспомогательной точки
     vector<vector<pair<int, int>>> bpp;
 
     int n = rotatedContour.size();
@@ -82,6 +90,8 @@ void gribovAlgorithm() {
     bpp.push_back(tempBPP);
 
     int prevPointsCount = 3;
+
+    double angleTolerance = 2;
 
     for (int pointNum = 1; pointNum <= n; pointNum++) {
         int pointNumMod = pointNum % n; //
@@ -105,6 +115,9 @@ void gribovAlgorithm() {
                         if ((int)angle % 45 != 0) {
                             continue;
                         }
+                    }
+                    if (prevPointNum == 0 && pointNum != 1) {
+                        continue;
                     }
                     vector<Point> newContour;
                     newContour.push_back(currentPoint);
@@ -205,12 +218,19 @@ void gribovAlgorithm() {
         currentAuxIndex = prevCoord.second;
     }
 
-    // drawLines(rotatedContourImg, rightContour, pink);
+    drawLines(rotatedContourImg, rightContour, pink);
 
     vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
+
+    out << rightRotatedContour.size() << endl;
+
+    for (Point point: rightRotatedContour) {
+        out << point.x << " " << point.y << endl;
+    }
+
     drawLines(rotatedContourImg, rightRotatedContour, pink);
     showImg(rotatedContourImg, "rotated");
-    imwrite("../grid3.jpg", rotatedContourImg);
+    imwrite("../grid2.jpg", rotatedContourImg);
 }
 
 void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Scalar color) {
@@ -260,7 +280,7 @@ double getAngleBetweenSegments(Point point1, Point point2, Point point3) {
 
 double getArea(vector<Point> contour) {
     //return contourArea(contour);
-    cout << "Their area " << contourArea(contour) << endl;
+    // cout << "Their area " << contourArea(contour) << endl;
     Rect boundRect = boundingRect(contour);
     int left = boundRect.x;
     int top = boundRect.y;
@@ -279,7 +299,7 @@ double getArea(vector<Point> contour) {
             }
         }
     }
-    cout << "My area " << cntArea << endl;
+    // cout << "My area " << cntArea << endl;
     return cntArea;
 }
 
