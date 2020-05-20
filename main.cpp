@@ -3,58 +3,21 @@
 #include "main.h"
 
 
-Scalar red(Scalar(0, 0, 255));
-Scalar green(Scalar(0, 255, 0));
-Scalar blue(Scalar(255, 0, 0));
-Scalar pink(Scalar(255, 0, 255));
+Scalar myRed(Scalar(0, 0, 255));
+Scalar myGreen(Scalar(0, 255, 0));
+Scalar myBlue(Scalar(255, 0, 0));
+Scalar myPink(Scalar(255, 0, 255));
 
 int main() {
-    projection();
-    // gribovAlgorithm();
+//    vector<Point> first = {Point(1, 1), Point(1, 3), Point(4, 3), Point(4, 1)};
+//    vector<Point> second = {Point(2, 2), Point(2, 6), Point(7, 6), Point(7, 2)};
+//    double area = intersect(first, second);
+//    cout << area << endl;
+    // projection();
+    gribovAlgorithm();
     // rotatedMinAreaRect();
     // !!! projection();
     // integratedDP();
-}
-
-Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd, Point point) {
-    double a0 = point.x - lineStart.x;
-    double a1 = lineEnd.x - lineStart.x;
-    double a2 = point.y - lineStart.y;
-    double a3 = lineEnd.y - lineStart.y;
-    double a4 = a0 * a1 + a2 * a3;
-    double a5 = a1 * a1;
-    double a6 = a2 * a2;
-    double a7 = sqrt(a5 + a6);
-    double x = lineStart.x + (a4/a7)*(a1/a7);
-    double y = lineStart.y + (a4/a7)*(a3/a7);
-    return Point(x, y);
-}
-
-void integratedDP() {
-    Mat img = imread("../satimg.jpg");
-
-    Mat contoursImg;
-    Canny(img, contoursImg, 100, 255);
-
-    vector<vector<Point>> contours;
-    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-    vector<vector<Point>> dpContours;
-    for (int i = 0; i < contours.size(); i++) {
-        vector<Point> contour = contours[i];
-        vector<Point> dpContour;
-        approxPolyDP(contour, dpContour, 2, false);
-        dpContours.push_back(dpContour);
-        cout << i << "  " << contour.size() << "  " << dpContour.size() << endl;
-    }
-
-    Mat integratedDpContoursImg = Mat::zeros(img.size(), CV_8UC3);
-    for (int i = 0; i < dpContours.size(); i++) {
-        drawLines(integratedDpContoursImg, dpContours[i], green);
-        drawPoints(integratedDpContoursImg, dpContours[i], red);
-    }
-    imshow("DP", integratedDpContoursImg);
-    waitKey(0);
 }
 
 void rotatedMinAreaRect() {
@@ -140,37 +103,5 @@ void convexHull() {
         drawContours(drawing, hull, (int)i, hullColor);
     }
     imshow("Convex hull", drawing);
-    waitKey(0);
-}
-
-void contours() {
-    Mat img = imread("../satimg.jpg");
-    imshow("Original", img);
-    Mat closed, opened, grayImg, cannyOutput;
-    Mat element5(5, 5, CV_8U, Scalar(1));
-    morphologyEx(img, closed, MORPH_CLOSE, element5);
-    imshow("Closed", closed);
-    morphologyEx(closed, opened, MORPH_OPEN, element5);
-    imshow("Opened", opened);
-    cvtColor(closed, grayImg, COLOR_BGR2GRAY);
-    Canny(grayImg, cannyOutput, 100, 255);
-    vector<vector<Point>> contours;
-    findContours(cannyOutput, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    vector<vector<Point>> hull(contours.size());
-    for (size_t i = 0; i < contours.size(); i++) {
-        convexHull(contours[i], hull[i]);
-    }
-    Mat drawing = Mat::zeros(cannyOutput.size(), CV_8UC3);
-    Scalar contourColor = Scalar(0, 0, 255);
-    Scalar hullColor = Scalar(0, 255, 0);
-    Scalar rectColor = Scalar(255, 0, 0);
-    cout << contours.size();
-    for (size_t i = 0; i < contours.size(); i++) {
-        Rect boundRect = boundingRect(contours[i]);
-        rectangle(drawing, boundRect.tl(), boundRect.br(), rectColor, 2);
-        drawContours(drawing, contours, (int)i, contourColor);
-        drawContours(drawing, hull, (int)i, hullColor);
-    }
-    imshow("Contours", drawing);
     waitKey(0);
 }
