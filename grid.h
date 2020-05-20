@@ -27,4 +27,3 @@ double getAngleBetweenSegments(Point point1, Point point2, Point point3);
 double getArea(vector<Point> contour);
 Point getPrevPoint(int pointNum, int auxNum, vector<Point> contour,
                    vector<vector<pair<int, int>>> bpp, map<Point, vector<Point>, comparePoints> auxilaryPoints);
-double getPCAAngle();

@@ -5,65 +5,77 @@
 #include <iostream>
 #include <map>
 #include <unordered_map>
+#include <fstream>
 #include "grid.h"
 
-extern Scalar red;
-extern Scalar green;
-extern Scalar blue;
-extern Scalar pink;
+extern Scalar myRed;
+extern Scalar myGreen;
+extern Scalar myBlue;
+extern Scalar myPink;
 
 // пока что на примере картинки с одним контуром реализую алгоритм Грибова
 void gribovAlgorithm() {
-    // Mat img = imread("../oneBuilding.jpeg");
-    Mat img = imread("../oneBuilding3.jpg");
+    String parametersPath = "../gridParameters.txt";
+    String inputPath = "../oneBuilding2.jpg";
+    String outputPath = "../grid2.jpg";
+
+    ofstream out;
+    out.open(parametersPath);
+
+    Mat img = imread(inputPath);
+
+    out << img.cols << endl;
+    out << img.rows << endl;
 
     Mat contoursImg;
     Canny(img, contoursImg, 100, 255);
-//    imshow("Contours", contoursImg);
-//    imwrite("../oneBuildingGrid.jpg", contoursImg);
 
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
+    out << contours.size() << endl;
+
+    vector<Point> contour  = contours[0];
+
+    out << contour.size() << endl;
+
+    for (Point point: contour) {
+        out << point.x << " " << point.y << endl;
+    }
+
     vector<Point> dpContour;
-    approxPolyDP(contours[0], dpContour, 3, true);
+    approxPolyDP(contour, dpContour, 3, true);
 
     Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
     Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+
+    drawLines(rotatedContourImg, dpContour, myGreen);
 
     int gridStartX = 0;
     int gridStartY = 0;
     int gridIntervalX = 3;
     int gridIntervalY = 3;
 
-    // тут просто по фану рисуется сетка
-//    drawGrid(gridStartX, gridStartY, gridIntervalX, gridIntervalY, gridImg, blue2);
-//    drawLines(gridImg, dpContour, green2);
-//    drawPoints(gridImg, dpContour, red2);
-//    showImg(gridImg, "dp contour");
-
     double rotationAngle = getRotationAngleInDeg(dpContour);
+    Point initCentroid = getCentroidPoint(dpContour);
+    vector<Point> rotatedContour = rotateContour(dpContour, rotationAngle);
 
-    Point centroid = getCentroidPoint(dpContour);
-
-    vector<Point> rotatedContour;
+    drawLines(rotatedContourImg, rotatedContour, myRed);
 
     map<Point, vector<Point>, comparePoints> auxilaryPoints;
 
-    for (const Point& point: dpContour) {
-        Point rotatedPoint = getRotatedPoint(point, centroid, rotationAngle);
-        rotatedContour.push_back(rotatedPoint);
+    for (const Point& rotatedPoint: rotatedContour) {
         Point nearestGridPoint = getNearestGridPoint(rotatedPoint, gridStartX, gridStartY, gridIntervalX, gridIntervalY);
         vector<Point> neighborPoints = getAuxilaryGridPoints(nearestGridPoint, gridIntervalX, gridIntervalY);
         auxilaryPoints[rotatedPoint] = neighborPoints;
-        drawPoints(rotatedContourImg, neighborPoints, blue);
+        drawPoints(rotatedContourImg, neighborPoints, myBlue);
     }
-    drawLines(rotatedContourImg, dpContour, green);
-    // drawLines(rotatedContourImg, rotatedContour, red);
+
     drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
 
     vector<vector<int>> sc;
     vector<vector<int>> da;
+    // pair int-int - номер предыдущей точки контура и номер ее вспомогательной точки
     vector<vector<pair<int, int>>> bpp;
 
     int n = rotatedContour.size();
@@ -83,10 +95,12 @@ void gribovAlgorithm() {
 
     int prevPointsCount = 3;
 
-    for (int pointNum = 1; pointNum <= n; pointNum++) {
-        int pointNumMod = pointNum % n; //
-        // Point currentPoint = rotatedContour[pointNum];
-        Point currentPoint = rotatedContour[pointNumMod];
+   //  double angleTolerance = 3;
+
+    for (int pointNum = 1; pointNum < n; pointNum++) {
+        // int pointNumMod = pointNum % n; //
+        Point currentPoint = rotatedContour[pointNum];
+        // Point currentPoint = rotatedContour[pointNumMod];
         tempSC.clear();
         tempDA.clear();
         tempBPP.clear();
@@ -94,18 +108,38 @@ void gribovAlgorithm() {
             double minArea = INFINITY;
             int newSC = 0;
             pair<int, int> bestPoint;
+
+            double minAreaNotStandard = INFINITY;
+            int newSCNotStandard = 0;
+            pair<int, int> bestPointNotStandard;
+            double minAngleDiff = 45;
+
             Point currentAuxPoint = auxilaryPoints[currentPoint][auxNum];
             for (int prevPointNum = pointNum - 1; prevPointNum >= 0 && prevPointNum > pointNum - prevPointsCount; prevPointNum--) {
                 Point prevPoint = rotatedContour[prevPointNum];
                 for (int prevAuxNum = 0; prevAuxNum < auxCount; prevAuxNum++) {
                     Point prevAuxPoint = auxilaryPoints[prevPoint][prevAuxNum];
+                    if (prevPointNum == 0 && pointNum != 1) {
+                        continue;
+                    }
+
+                    bool angleIsStandard = true;
+                    int angleMod = 0;
                     if (prevPointNum != 0) {
                         Point prevPrevPoint = getPrevPoint(prevPointNum, prevAuxNum, rotatedContour, bpp, auxilaryPoints);
                         double angle = getAngleBetweenSegments(prevPrevPoint, prevAuxPoint, currentAuxPoint);
-                        if ((int)angle % 45 != 0) {
+                        double tempAngle = angle;
+                        double normedAngle = angle - ((int)(angle / 45) * 45);
+                        if (normedAngle < 45 && normedAngle > 22) {
+                            tempAngle = 45 - normedAngle;
+                        }
+                        angleMod = (int)tempAngle % 45;
+                        angleIsStandard = angleMod == 0;
+                        if (!angleIsStandard && angleMod > minAngleDiff) {
                             continue;
                         }
                     }
+
                     vector<Point> newContour;
                     newContour.push_back(currentPoint);
                     for (int j = pointNum - 1; j > prevPointNum; j--){
@@ -117,16 +151,38 @@ void gribovAlgorithm() {
                     newContour.push_back(currentAuxPoint);
                     double currentArea = getArea(newContour);
                     double allArea = currentArea + da[prevPointNum][prevAuxNum];
-                    if (allArea < minArea) {
-                        minArea = allArea;
-                        bestPoint = make_pair(prevPointNum, prevAuxNum);
-                        newSC = sc[prevPointNum][prevAuxNum] + 1;
+                    if (!angleIsStandard) {
+                        if (angleMod == minAngleDiff) {
+                            if (allArea < minAreaNotStandard) {
+                                minAreaNotStandard = allArea;
+                                bestPointNotStandard = make_pair(prevPointNum, prevAuxNum);
+                                newSCNotStandard = sc[prevPointNum][prevAuxNum] + 1;
+                            }
+                        }
+                        if (angleMod < minAngleDiff) {
+                            minAngleDiff = angleMod;
+                            minAreaNotStandard = allArea;
+                            bestPointNotStandard = make_pair(prevPointNum, prevAuxNum);
+                            newSCNotStandard = sc[prevPointNum][prevAuxNum] + 1;
+                        }
+                    } else {
+                        if (allArea < minArea) {
+                            minArea = allArea;
+                            bestPoint = make_pair(prevPointNum, prevAuxNum);
+                            newSC = sc[prevPointNum][prevAuxNum] + 1;
+                        }
                     }
                 }
             }
-            tempSC.push_back(newSC);
-            tempDA.push_back(minArea);
-            tempBPP.push_back(bestPoint);
+            if (newSC == 0) {
+                tempSC.push_back(newSCNotStandard);
+                tempDA.push_back(minAreaNotStandard);
+                tempBPP.push_back(bestPointNotStandard);
+            } else {
+                tempSC.push_back(newSC);
+                tempDA.push_back(minArea);
+                tempBPP.push_back(bestPoint);
+            }
         }
         if (pointNum == n) {
             sc[0] = tempSC;
@@ -205,12 +261,20 @@ void gribovAlgorithm() {
         currentAuxIndex = prevCoord.second;
     }
 
-    // drawLines(rotatedContourImg, rightContour, pink);
+    drawLines(rotatedContourImg, rightContour, myPink);
 
-    vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
-    drawLines(rotatedContourImg, rightRotatedContour, pink);
+    // vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
+    vector<Point> rightRotatedContour = rotateContourWithCentroid(rightContour, -rotationAngle, initCentroid);
+
+    out << rightRotatedContour.size() << endl;
+
+    for (Point point: rightRotatedContour) {
+        out << point.x << " " << point.y << endl;
+    }
+
+    drawLines(rotatedContourImg, rightRotatedContour, myPink);
     showImg(rotatedContourImg, "rotated");
-    imwrite("../grid3.jpg", rotatedContourImg);
+    imwrite(outputPath, rotatedContourImg);
 }
 
 void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Scalar color) {
@@ -260,7 +324,7 @@ double getAngleBetweenSegments(Point point1, Point point2, Point point3) {
 
 double getArea(vector<Point> contour) {
     //return contourArea(contour);
-    cout << "Their area " << contourArea(contour) << endl;
+    // cout << "Their area " << contourArea(contour) << endl;
     Rect boundRect = boundingRect(contour);
     int left = boundRect.x;
     int top = boundRect.y;
@@ -279,7 +343,7 @@ double getArea(vector<Point> contour) {
             }
         }
     }
-    cout << "My area " << cntArea << endl;
+    // cout << "My area " << cntArea << endl;
     return cntArea;
 }
 
@@ -289,35 +353,4 @@ Point getPrevPoint(int pointNum, int auxNum, vector<Point> contour,
     int prevAuxPointNum = bpp[pointNum][auxNum].second;
     Point prevPoint = auxilaryPoints[contour[prevPointNum]][prevAuxPointNum];
     return prevPoint;
-}
-
-double getPCAAngle() {
-    //    // поворот
-//    Mat pts_mat(dpContour.size(), 2, CV_64FC1);
-//    for (int j = 0; j < pts_mat.rows; ++j) {
-//        pts_mat.at<double>(j,0) = dpContour[j].x;
-//        pts_mat.at<double>(j,1) = dpContour[j].y;
-//    }
-//
-//    PCA pca(pts_mat, Mat(), PCA::DATA_AS_ROW);
-//
-//    // В отдельный вектор выносим собственные вектора,
-//    // полученные при помощи PCA.
-//    vector<Point2d> eigen_vecs(2);
-//    vector<double> eigen_val(2);
-//    for(int j = 0; j < 2; ++j) {
-//        eigen_vecs[j] = Point2d(pca.eigenvectors.at<double>(j,0), pca.eigenvectors.at<double>(j,1));
-//        eigen_val[j] = pca.eigenvalues.at<double>(0, j);
-//    }
-//
-//    Point pos = Point(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
-//    line(rotatedContourImg, pos, pos + 0.02 * Point(eigen_vecs[0].x * eigen_val[0], eigen_vecs[0].y * eigen_val[0]) , CV_RGB(255, 255, 0));
-//    line(rotatedContourImg, pos, pos + 0.02 * Point(eigen_vecs[1].x * eigen_val[1], eigen_vecs[1].y * eigen_val[1]) , CV_RGB(0, 255, 255));
-//
-//    drawLines(rotatedContourImg, dpContour, green);
-//
-//    // Искомый угол.
-//    double angle = atan2(eigen_vecs[0].y, eigen_vecs[0].x);
-//    cout << angle << endl;
-    return 0;
 }

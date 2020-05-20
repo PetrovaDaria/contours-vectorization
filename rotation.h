@@ -12,6 +12,7 @@ using namespace std;
 using namespace cv;
 
 vector<Point> rotateContour(vector<Point> contour, double angle);
+vector<Point> rotateContourWithCentroid(vector<Point> contour, double angle, Point centroid);
 Point getRotatedPoint(Point point, Point centroid, double rotationAngle);
 Point getCentroidPoint(vector<Point> contour);
 double getPolarAngle(Point point);
@@ -20,3 +21,4 @@ double fromDegToRad(double angleInDeg);
 double fromRadToDeg(double angleInRad);
 Point fromPolarToDecart(double angleInRad, double radius);
 double getRotationAngleInDeg(vector<Point> contour);
+double getPCAAngle(vector<Point> contour);

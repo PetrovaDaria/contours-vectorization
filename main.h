@@ -14,9 +14,11 @@
 #include "myDP.cpp"
 #include "projection.cpp"
 #include "rotation.cpp"
+#include "iou.cpp"
 
 using namespace cv;
 using namespace std;
+using namespace CGAL;
 
 int main();
 double getSegmentLength(Point start, Point end);
