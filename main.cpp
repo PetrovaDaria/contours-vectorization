@@ -9,99 +9,148 @@ Scalar myBlue(Scalar(255, 0, 0));
 Scalar myPink(Scalar(255, 0, 255));
 
 int main() {
-//    vector<Point> first = {Point(1, 1), Point(1, 3), Point(4, 3), Point(4, 1)};
-//    vector<Point> second = {Point(2, 2), Point(2, 6), Point(7, 6), Point(7, 2)};
-//    double area = intersect(first, second);
-//    cout << area << endl;
     // projection();
-    gribovAlgorithm();
+    // gribovAlgorithm();
     // rotatedMinAreaRect();
-    // !!! projection();
-    // integratedDP();
+    processing();
 }
 
-void rotatedMinAreaRect() {
-    Mat img = imread("../satimg.jpg");
-    Mat grayImg, cannyOutput;
-    cvtColor(img, grayImg, COLOR_BGR2GRAY);
-    Canny(grayImg, cannyOutput, 100, 255);
+void processing() {
+//    String dirPath = "../oneBuilding2/";
+//    String inputPath = dirPath + "oneBuilding2.jpg";
+    String dirPath = "../satImg/";
+    String inputPath = dirPath + "satImg.jpg";
+    String imgPath = dirPath + "img/";
+    String paramsPath = dirPath + "params/";
+
+
+    // максимальная разница площадей области внутри контура и прямоугольника, описывающего его
+    int maxAreaDiff = 200;
+
+    // параметр размера коридора для Дугласа-Пекера
+    vector<int> dpEpsilons = {1, 2, 3};
+
+    // параметры для сетки в алгоритме Грибова
+    int gridStartX = 0;
+    int gridStartY = 0;
+
+    // одинаковый grid interval для x и y
+    vector<int> gridIntervals = {1, 2, 3};
+
+    // количество предыдущих точек, рассматриваемых в качестве потенциальной лучшей предыдущей точки
+    vector<int> prevPointsCounts = {2, 3};
+
+    // открываем исходное изображение
+    Mat img = imread(inputPath);
+
+    // это изображение только для контуров
+    Mat contoursImg;
+    Canny(img, contoursImg, 100, 255);
+
+    // ищем на картинке контуры
     vector<vector<Point>> contours;
-    findContours(cannyOutput, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    vector<vector<Point>> hull(contours.size());
-    for (size_t i = 0; i < contours.size(); i++) {
-        convexHull(contours[i], hull[i]);
-    }
-    Mat drawing = Mat::zeros(cannyOutput.size(), CV_8UC3);
-    Scalar contourColor = Scalar(0, 255, 0);
-    Scalar hullColor = Scalar(255, 0, 0);
-    Scalar rectColor = Scalar(0, 0, 255);
-    cout << contours.size();
-    for (size_t i = 0; i < contours.size(); i++) {
-        vector<Point> contour = contours[i];
-        RotatedRect minRect = minAreaRect(contour);
-        Rect boundRect = boundingRect(contour);
-        int left = boundRect.x;
-        int top = boundRect.y;
-        int width = boundRect.width;
-        int height = boundRect.height;
-        int x_end = left + width;
-        int y_end = top + height;
-        int cntArea = 0;
-        for (int x = left; x < x_end; x++)
-        {
-            for (int y = top; y < y_end; y++)
-            {
-                double test = pointPolygonTest(contour, Point2f(x, y), false);
-                if (test == 1 || test == 0) {
-                    cntArea += 1;
+    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    // итерируемся по разным значениям, чтобы найти лучшее
+    for (int dpEps: dpEpsilons) {
+        for (int gridInterval: gridIntervals) {
+            for (int prevPointsCount: prevPointsCounts) {
+                Mat resultImg = Mat::zeros(img.size(), CV_8UC3);
+                String currentPath =
+                        "eps_" +
+                        to_string(dpEps) +
+                        "_interval_" +
+                        to_string(gridInterval) +
+                        "_ppc_" +
+                        to_string(prevPointsCount);
+                String currentImagePath = imgPath + currentPath + ".jpg";
+                String currentParametersPath = paramsPath + currentPath + ".txt";
+
+                ofstream currentOut;
+                currentOut.open(currentParametersPath);
+
+                // записываем ширину и высоту
+                currentOut << img.cols << endl;
+                currentOut << img.rows << endl;
+
+                // записываем количество контуров
+                currentOut << contours.size() << endl;
+
+
+                for (vector<Point> contour: contours) {
+                    // записываем количество вершин в исходном контуре
+                    currentOut << contour.size() << endl;
+
+                    // записываем координаты каждой вершины исходного контура
+                    for (Point point: contour) {
+                        currentOut << point.x << " " << point.y << endl;
+                    }
+
+                    drawLines(resultImg, contour, myGreen);
+
+                    // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
+                    if (canBeDescribedByRect(contour, maxAreaDiff)) {
+                        // находим контур-прямоугольник
+                        vector<Point> resultContour = processingMinAreaRect(contour);
+
+                        // записываем количество вершин в итоговом контуре
+                        currentOut << resultContour.size() << endl;
+
+                        // записываем координаты каждой вершины итогового контура
+                        for (const Point &point: resultContour) {
+                            currentOut << point.x << " " << point.y << endl;
+                        }
+
+                        drawLines(resultImg, resultContour, myPink);
+
+                        // переходим к следующему контуру
+                        continue;
+                    }
+
+                    // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
+                    vector<Point> gribovContour = processingGribovAlgorithm(
+                            resultImg,
+                            contour,
+                            dpEps,
+                            gridStartX,
+                            gridStartY,
+                            gridInterval,
+                            gridInterval,
+                            prevPointsCount);
+
+                    // записываем количество вершин в контуре из Грибова
+                    currentOut << gribovContour.size() << endl;
+
+                    // записываем координаты каждой вершины контура из Грибова
+                    for (const Point &point: gribovContour) {
+                        currentOut << point.x << " " << point.y << endl;
+                    }
+
+                    drawLines(resultImg, gribovContour, myPink);
                 }
+                imwrite(currentImagePath, resultImg);
             }
         }
-        cout << i << endl;
-        cout << "Contour size " << contour.size() << endl;
-        cout << "Contour moment area " << moments(contour).m00 << endl;
-        cout << "Contour area " << cntArea << endl;
-        cout << "Rect size " << minRect.size << endl;
-        cout << "Rect area " << minRect.size.area() << endl;
-        Point2f rectPoints[4];
-        minRect.points(rectPoints);
-        drawContours(drawing, contours, (int)i, contourColor);
-        for ( int j = 0; j < 4; j++ )
-        {
-            line( drawing, rectPoints[j], rectPoints[(j+1)%4], rectColor );
-        }
-        vector<Point> poly;
-        approxPolyDP(contour, poly, 5, true);
-        polylines(drawing, poly, true, Scalar(255, 0, 255), 1);
     }
-    namedWindow("Min area rect", WINDOW_NORMAL);
-    imshow("Min area rect", drawing);
-    imwrite("../minAreaRect.jpg", drawing);
-    waitKey(0);
 }
 
-void convexHull() {
-    Mat img = imread("../satimg.jpg");
-    Mat grayImg, cannyOutput;
-    cvtColor(img, grayImg, COLOR_BGR2GRAY);
-    Canny(grayImg, cannyOutput, 100, 255);
-    vector<vector<Point>> contours;
-    findContours(cannyOutput, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    vector<vector<Point>> hull(contours.size());
-    for (size_t i = 0; i < contours.size(); i++) {
-        convexHull(contours[i], hull[i]);
+// может ли контур быть описан прямоугольником с ограничением на максимальную разность между площадями
+bool canBeDescribedByRect(vector<Point> contour, int maxDiff) {
+    RotatedRect rect = minAreaRect(contour);
+    double rectArea = rect.size.area();
+    double contourArea = getContourArea(contour);
+    double diff = abs(rectArea - contourArea);
+    return diff < maxDiff;
+}
+
+// нахождение контура описывающего прямоугольника
+vector<Point> processingMinAreaRect(vector<Point> contour) {
+    RotatedRect rect = minAreaRect(contour);
+    Point2f rectPoints[4];
+    rect.points(rectPoints);
+    vector<Point> result;
+    for (Point point: rectPoints) {
+        result.push_back(point);
     }
-    Mat drawing = Mat::zeros(cannyOutput.size(), CV_8UC3);
-    Scalar contourColor = Scalar(0, 0, 255);
-    Scalar hullColor = Scalar(0, 255, 0);
-    Scalar rectColor = Scalar(255, 0, 0);
-    cout << contours.size();
-    for (size_t i = 0; i < contours.size(); i++) {
-        Rect boundRect = boundingRect(contours[i]);
-        rectangle(drawing, boundRect.tl(), boundRect.br(), rectColor, 2);
-        drawContours(drawing, contours, (int)i, contourColor);
-        drawContours(drawing, hull, (int)i, hullColor);
-    }
-    imshow("Convex hull", drawing);
-    waitKey(0);
+    return result;
 }

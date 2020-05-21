@@ -11,5 +11,6 @@
 using namespace cv;
 using namespace std;
 
+int getContourArea(vector<Point> contour);
 tuple<vector<Point>, bool> doubleContourToSingle(vector<Point> points);
 vector<Point> deleteRepeatedNeighborPoints(vector<Point> points);

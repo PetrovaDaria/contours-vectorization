@@ -14,18 +14,12 @@
 #include "myDP.cpp"
 #include "projection.cpp"
 #include "rotation.cpp"
-#include "iou.cpp"
 
 using namespace cv;
 using namespace std;
-using namespace CGAL;
 
 int main();
-double getSegmentLength(Point start, Point end);
-Point getIntersectionOfLineAndPointPerpendicular(Point lineStart, Point lineEnd, Point point);
-vector<double> getSidesLengths(vector<Point> points, bool joinEnds);
-void integratedDP();
-void projection();
-void rotatedMinAreaRect();
-void convexHull();
-void contours();
+void processing();
+bool canBeDescribedByRect(vector<Point> contour, int maxDiff);
+vector<Point> processingMinAreaRect(vector<Point> contour);
+

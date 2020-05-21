@@ -2,8 +2,32 @@
 // Created by Dariya Petrova on 11.05.2020.
 //
 
-
+#include <iostream>
+#include <fstream>
 #include "contourUtils.h"
+
+int getContourArea(vector<Point> contour) {
+    Rect boundRect = boundingRect(contour);
+    int left = boundRect.x;
+    int top = boundRect.y;
+    int width = boundRect.width;
+    int height = boundRect.height;
+    int x_end = left + width;
+    int y_end = top + height;
+    int cntArea = 0;
+    for (int x = left; x < x_end; x++)
+    {
+        for (int y = top; y < y_end; y++)
+        {
+            double test = pointPolygonTest(contour, Point(x, y), false);
+            if (test == 1 || test == 0) {
+                cntArea += 1;
+            }
+        }
+    }
+
+    return cntArea;
+}
 
 // двойной контур, в котором дважды повторяются точки и у которого начало где-то не в начале, переводит в одиночный
 // актуально для незамкнутых контуров
