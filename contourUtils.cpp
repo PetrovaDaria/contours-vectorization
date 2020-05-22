@@ -29,31 +29,47 @@ int getContourArea(vector<Point> contour) {
     return cntArea;
 }
 
+bool isClosedContour(vector<Point> contour) {
+    for (int i = 0; i < contour.size(); i++) {
+        if (i - 1 != 0 && i + 1 != contour.size()) {
+            if (contour[i - 1] == contour[i + 1]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // двойной контур, в котором дважды повторяются точки и у которого начало где-то не в начале, переводит в одиночный
 // актуально для незамкнутых контуров
-tuple<vector<Point>, bool> doubleContourToSingle(vector<Point> points) {
+vector<Point> doubleContourToSingle(vector<Point> contour) {
     vector<Point> result;
     bool hasStart = false;
-    for (int i = 0; i < points.size(); i++) {
+    for (int i = 0; i < contour.size(); i++) {
         if (!hasStart &&
-            i - 1 != 0 && i + 1 != points.size() &&
-            points[i-1] == points[i+1]) {
-            result.push_back(points[i]);
+            i - 1 != 0 &&
+            i + 1 != contour.size() &&
+            contour[i - 1] == contour[i + 1]
+        ) {
+            result.push_back(contour[i]);
             hasStart = true;
             continue;
         }
         if (hasStart) {
-            result.push_back(points[i]);
+            result.push_back(contour[i]);
         }
-        if (i - 1 != 0 && i + 1 != points.size() && points[i-1] == points[i+1]) {
+        if (i - 1 != 0 &&
+            i + 1 != contour.size() &&
+            contour[i - 1] == contour[i + 1]
+        ) {
             break;
         }
     }
-    if (result.size() == 0) {
-        return make_tuple(points, false);
+    if (result.empty()) {
+        return contour;
     }
 
-    return make_tuple(result, true);
+    return result;
 }
 
 // проходит по точкам и удаляет дублеров-соседей

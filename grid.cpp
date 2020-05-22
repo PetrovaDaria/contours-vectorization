@@ -26,9 +26,6 @@ vector<Point> processingGribovAlgorithm(
     vector<Point> dpContour;
     approxPolyDP(contour, dpContour, dpEps, true);
 
-    drawLines(img, dpContour, myBlue);
-    drawPoints(img, dpContour, myRed);
-
 //    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
 //    Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
 //

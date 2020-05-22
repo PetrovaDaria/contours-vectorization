@@ -14,12 +14,14 @@
 #include "myDP.cpp"
 #include "projection.cpp"
 #include "rotation.cpp"
+#include "iou.cpp"
 
 using namespace cv;
 using namespace std;
 
 int main();
 void processing();
+void iterProcessing();
 bool canBeDescribedByRect(vector<Point> contour, int maxDiff);
 vector<Point> processingMinAreaRect(vector<Point> contour);
 
