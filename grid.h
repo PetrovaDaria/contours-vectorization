@@ -8,6 +8,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+#include "contourUtils.h"
 #include "drawing.h"
 #include "rotation.h"
 
@@ -19,11 +20,19 @@ struct comparePoints {
 };
 
 void gribovAlgorithm();
-void drawGrid(int startX, int startY, int intervalX, int intervalY, Mat img, Scalar color);
+vector<Point> processingGribovAlgorithm(
+        Mat img,
+        vector<Point> contour,
+        int dpEps,
+        int gridStartX,
+        int gridStartY,
+        int gridIntervalX,
+        int gridIntervalY,
+        int prevPointsCount
+);
 Point getNearestGridPoint(Point point, int startX, int startY, int intervalX, int intervalY);
 vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int intervalY);
 int getNearestCoord(int pointCoord, int gridInterval, int gridStart);
 double getAngleBetweenSegments(Point point1, Point point2, Point point3);
-double getArea(vector<Point> contour);
 Point getPrevPoint(int pointNum, int auxNum, vector<Point> contour,
                    vector<vector<pair<int, int>>> bpp, map<Point, vector<Point>, comparePoints> auxilaryPoints);
