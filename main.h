@@ -15,13 +15,17 @@
 #include "projection.cpp"
 #include "rotation.cpp"
 #include "iou.cpp"
+#include "parameters.cpp"
 
 using namespace cv;
 using namespace std;
 
 int main();
+vector<vector<Point>> getVectorizedContoursFromImg(Mat img, Parameters params, String outputImgPath);
+vector<vector<Point>> getVectorizedContoursFromContours(vector<vector<Point>> contours, Parameters params);
+void cropImg();
 void processing();
 void iterProcessing();
-bool canBeDescribedByRect(vector<Point> contour, int maxDiff);
-vector<Point> processingMinAreaRect(vector<Point> contour);
+//bool canBeDescribedByRect(vector<Point> contour, int maxDiff);
+//vector<Point> processingMinAreaRect(vector<Point> contour);
 

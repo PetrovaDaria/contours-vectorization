@@ -19,8 +19,18 @@ struct comparePoints {
     }
 };
 
-void gribovAlgorithm();
 vector<Point> processingGribovAlgorithm(
+        Mat img,
+        vector<Point> contour,
+        int dpEps,
+        int gridStartX,
+        int gridStartY,
+        int gridIntervalX,
+        int gridIntervalY,
+        int prevPointsCount
+);
+
+vector<Point> processingGribovAlgorithm2(
         Mat img,
         vector<Point> contour,
         int dpEps,

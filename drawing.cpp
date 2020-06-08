@@ -5,11 +5,25 @@
 #include <iostream>
 #include "drawing.h"
 
+/*!
+ * показывает изображение
+ * @param img - изображение
+ * @param imgName - имя изображения
+ */
 void showImg(Mat img, String imgName) {
     imshow(imgName, img);
     waitKey(0);
 }
 
+/*!
+ * рисует на изображении линии
+ * @param img - изображение
+ * @param points - массив точек
+ * @param color - цвет линии
+ * @param joinEnds - соединяются ли концы
+ * @param isShowImg - надо ли показывать изображение
+ * @param imgName - имя изображения
+ */
 void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds, bool isShowImg,
                String imgName) {
     int size = points.size();
@@ -18,13 +32,19 @@ void drawLines(Mat img, vector<Point> points, Scalar color, bool joinEnds, bool 
         end -= 1;
     }
     for (int j = 0; j < end; j++) {
-        line(img, points[j], points[(j + 1) % size], color);
+        line(img, points[j], points[(j + 1) % size], color, 1, LINE_AA);
         if (isShowImg) {
             showImg(img, imgName);
         }
     }
 }
 
+/*!
+ * рисует на изображении точки
+ * @param img - изображение
+ * @param points - массив точек
+ * @param color - цвет точек
+ */
 void drawPoints(Mat img, vector<Point> points, Scalar color) {
     int size = points.size();
     for (int j = 0; j < size; j++) {

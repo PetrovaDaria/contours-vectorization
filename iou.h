@@ -15,4 +15,3 @@ using namespace cv;
 using namespace std;
 
 double getIou(Mat img1, Mat img2);
-int getAllContoursArea(Mat img);

@@ -1,7 +1,5 @@
 #include <iostream>
-
 #include "main.h"
-
 
 Scalar myRed(Scalar(0, 0, 255));
 Scalar myGreen(Scalar(0, 255, 0));
@@ -13,92 +11,152 @@ int main() {
     // projection();
     // gribovAlgorithm();
     // rotatedMinAreaRect();
-    // processing();
-    iterProcessing();
+    processing();
+    // iterProcessing();
+    // iouTest2();
+    // cropImg();
 }
 
-void processContour(vector<Point> contour, Mat resultImg, ofstream out, int maxAreaDiff, int dpEps, int gridStartX, int gridStartY, int gridInterval, int prevPointsCount) {
-    bool isClosed = isClosedContour(contour);
-    if (!isClosed) {
-        contour = doubleContourToSingle(contour);
-    }
+void example() {
+    String dirPath = "../oneBuilding3/";
+    String inputPath = dirPath + "oneBuilding3.jpg";
+    Mat img = imread(inputPath);
+    Parameters params = Parameters();
 
-    // записываем количество вершин в исходном контуре
-    out << contour.size() << endl;
+    vector<vector<Point>> vectorizedContours = getVectorizedContoursFromImg(img, params, "exampleResult.jpg");
+}
 
-    // записываем координаты каждой вершины исходного контура
-    for (Point point: contour) {
-        out << point.x << " " << point.y << endl;
-    }
+/*!
+    Получение векторизованных контуров по изображению
+    @param img - исходное изображения
+    @param params - объект с параметрами алгоритма
+    @param outputImgPath - путь, по которому будет сохранено изображение с векторизованными контурами
+    \return векторизованные контуры
+ */
+vector<vector<Point>> getVectorizedContoursFromImg(Mat img, Parameters params, String outputImgPath) {
+    // изображение только для контуров
+    Mat contoursImg;
+    Canny(img, contoursImg, 100, 255);
 
-    drawLines(resultImg, contour, myGreen);
+    // ищем на картинке контуры
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(contoursImg, contours, hierarchy,RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-    if (canBeDescribedByRect(contour, maxAreaDiff)) {
-        // находим контур-прямоугольник
-        vector<Point> resultContour = processingMinAreaRect(contour);
+    Mat resultImg = Mat::zeros(img.size(), CV_8UC3);
 
-        // записываем количество вершин в итоговом контуре
-        out << resultContour.size() << endl;
+    vector<vector<Point>> vectorizedContours;
 
-        // записываем координаты каждой вершины итогового контура
-        for (const Point &point: resultContour) {
-            out << point.x << " " << point.y << endl;
+    for (vector<Point> contour: contours) {
+        bool isClosed = isClosedContour(contour);
+        if (!isClosed) {
+            contour = doubleContourToSingle(contour);
         }
 
-        drawLines(resultImg, resultContour, myPink);
+        drawLines(resultImg, contour, myGreen);
 
-        return;
+        // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
+        if (canBeDescribedByRect(contour, params.maxAreaDiff)) {
+            // находим контур-прямоугольник
+            vector<Point> resultContour = processingMinAreaRect(contour);
+
+            vectorizedContours.push_back(resultContour);
+            drawLines(resultImg, resultContour, myPink);
+
+            // переходим к следующему контуру
+            continue;
+        }
+
+        // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
+        vector<Point> gribovContour = processingGribovAlgorithm(
+                resultImg,
+                contour,
+                params.dpEps,
+                params.gridStartPoint.x,
+                params.gridStartPoint.y,
+                params.gridInterval,
+                params.gridInterval,
+                params.prevPointsCount);
+
+        vectorizedContours.push_back(gribovContour);
+        drawLines(resultImg, gribovContour, myPink);
     }
 
-    // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
-    vector<Point> gribovContour = processingGribovAlgorithm(
-            resultImg,
-            contour,
-            dpEps,
-            gridStartX,
-            gridStartY,
-            gridInterval,
-            gridInterval,
-            prevPointsCount);
+    imwrite(outputImgPath, resultImg);
 
-    // записываем количество вершин в контуре из Грибова
-    out << gribovContour.size() << endl;
+    return vectorizedContours;
+}
 
-    // записываем координаты каждой вершины контура из Грибова
-    for (const Point &point: gribovContour) {
-        out << point.x << " " << point.y << endl;
+/*!
+    Получение векторизованных контуров по массиву исходных контуров
+    @param contours - массив исходных контуров
+    @param params - объект с параметрами алгоритма
+    \return векторизованные контуры
+ */
+vector<vector<Point>> getVectorizedContoursFromContours(vector<vector<Point>> contours, Parameters params) {
+    vector<vector<Point>> vectorizedContours;
+
+    for (vector<Point> contour: contours) {
+        bool isClosed = isClosedContour(contour);
+        if (!isClosed) {
+            contour = doubleContourToSingle(contour);
+        }
+
+        // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
+        if (canBeDescribedByRect(contour, params.maxAreaDiff)) {
+            // находим контур-прямоугольник
+            vector<Point> resultContour = processingMinAreaRect(contour);
+
+            vectorizedContours.push_back(resultContour);
+
+            // переходим к следующему контуру
+            continue;
+        }
+
+        // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
+        vector<Point> gribovContour = processingGribovAlgorithm(
+                resultImg,
+                contour,
+                params.dpEps,
+                params.gridStartPoint.x,
+                params.gridStartPoint.y,
+                params.gridInterval,
+                params.gridInterval,
+                params.prevPointsCount);
+
+        vectorizedContours.push_back(gribovContour);
     }
 
-    drawLines(resultImg, gribovContour, myPink);
+    return vectorizedContours;
 }
 
 void processing() {
-//    String dirPath = "../oneBuilding3/";
-//    String inputPath = dirPath + "oneBuilding3.jpg";
+    String dirPath = "../oneBuilding3/";
+    String inputPath = dirPath + "oneBuilding3.jpg";
 
-    String dirPath = "../satImg/";
-    String inputPath = dirPath + "satImg.jpg";
+//    String dirPath = "../satImg/";
+//    String inputPath = dirPath + "satImg.jpg";
 
     String outPutImgPath = dirPath + "result.jpg";
     String paramsPath = dirPath + "result.txt";
 
+    Parameters params = Parameters();
 
-    // максимальная разница площадей области внутри контура и прямоугольника, описывающего его
-    int maxAreaDiff = 200;
-
-    // параметр размера коридора для Дугласа-Пекера
-    int dpEps = 1;
-
-    // параметры для сетки в алгоритме Грибова
-    int gridStartX = 0;
-    int gridStartY = 0;
-
-    // одинаковый grid interval для x и y
-    int gridInterval = 1;
-
-    // количество предыдущих точек, рассматриваемых в качестве потенциальной лучшей предыдущей точки
-    int prevPointsCount = 3;
+//    // максимальная разница площадей области внутри контура и прямоугольника, описывающего его
+//    int maxAreaDiff = 200;
+//
+//    // параметр размера коридора для Дугласа-Пекера
+//    int dpEps = 3;
+//
+//    // параметры для сетки в алгоритме Грибова
+//    int gridStartX = 0;
+//    int gridStartY = 0;
+//
+//    // одинаковый grid interval для x и y
+//    int gridInterval = 1;
+//
+//    // количество предыдущих точек, рассматриваемых в качестве потенциальной лучшей предыдущей точки
+//    int prevPointsCount = 2;
 
     // открываем исходное изображение
     Mat img = imread(inputPath);
@@ -112,7 +170,6 @@ void processing() {
     vector<Vec4i> hierarchy;
     findContours(contoursImg, contours, hierarchy,RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    Mat rightImg = Mat::zeros(img.size(), CV_8UC3);
     Mat resultImg = Mat::zeros(img.size(), CV_8UC3);
 
     ofstream currentOut;
@@ -144,7 +201,7 @@ void processing() {
         drawLines(resultImg, contour, myGreen);
 
         // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-        if (canBeDescribedByRect(contour, maxAreaDiff)) {
+        if (canBeDescribedByRect(contour, params.maxAreaDiff)) {
             // находим контур-прямоугольник
             vector<Point> resultContour = processingMinAreaRect(contour);
 
@@ -157,7 +214,6 @@ void processing() {
             }
 
             allRightContours.push_back(resultContour);
-            drawLines(rightImg, resultContour, myWhite);
             drawLines(resultImg, resultContour, myPink);
 
             // переходим к следующему контуру
@@ -168,12 +224,12 @@ void processing() {
         vector<Point> gribovContour = processingGribovAlgorithm(
                 resultImg,
                 contour,
-                dpEps,
-                gridStartX,
-                gridStartY,
-                gridInterval,
-                gridInterval,
-                prevPointsCount);
+                params.dpEps,
+                params.gridStartPoint.x,
+                params.gridStartPoint.y,
+                params.gridInterval,
+                params.gridInterval,
+                params.prevPointsCount);
 
         // записываем количество вершин в контуре из Грибова
         currentOut << gribovContour.size() << endl;
@@ -184,21 +240,21 @@ void processing() {
         }
 
         allRightContours.push_back(gribovContour);
-        drawLines(rightImg, gribovContour, myWhite);
         drawLines(resultImg, gribovContour, myPink);
     }
+    Mat rightImg = Mat::zeros(img.size(), CV_8UC3);
     fillPoly(rightImg, allRightContours, myWhite);
-    // double iou = getIou(img, rightImg);
-    // cout << "iou " << iou << endl;
+    double iou = getIou(img, rightImg);
+    cout << "iou " << iou << endl;
     imwrite(outPutImgPath, resultImg);
 }
 
 void iterProcessing() {
-    String dirPath = "../satImg/";
-    String inputPath = dirPath + "satImg.jpg";
+//    String dirPath = "../satImg/";
+//    String inputPath = dirPath + "satImg.jpg";
 
-//    String dirPath = "../one/";
-//    String inputPath = dirPath + "one.jpg";
+    String dirPath = "../netBuildings/";
+    String inputPath = dirPath + "netBuildings.jpg";
 
     String imgPath = dirPath + "img/";
     String paramsPath = dirPath + "params/";
@@ -256,6 +312,7 @@ void iterProcessing() {
                 // записываем количество контуров
                 currentOut << contours.size() << endl;
 
+                vector<vector<Point>> allRightContours;
 
                 for (vector<Point> contour: contours) {
                     bool isClosed = isClosedContour(contour);
@@ -287,6 +344,7 @@ void iterProcessing() {
                         }
 
                         drawLines(resultImg, resultContour, myPink);
+                        allRightContours.push_back(resultContour);
 
                         // переходим к следующему контуру
                         continue;
@@ -312,30 +370,28 @@ void iterProcessing() {
                     }
 
                     drawLines(resultImg, gribovContour, myPink);
+                    allRightContours.push_back(gribovContour);
                 }
+                Mat rightImg = Mat::zeros(img.size(), CV_8UC3);
+                fillPoly(rightImg, allRightContours, myWhite);
+                double iou = getIou(img, rightImg);
+                cout << "eps " << dpEps << " interval " << gridInterval << " ppc " << prevPointsCount << " iou " << iou << endl;
                 imwrite(currentImagePath, resultImg);
             }
         }
     }
 }
 
-// может ли контур быть описан прямоугольником с ограничением на максимальную разность между площадями
-bool canBeDescribedByRect(vector<Point> contour, int maxDiff) {
-    RotatedRect rect = minAreaRect(contour);
-    double rectArea = rect.size.area();
-    double contourArea = getContourArea(contour);
-    double diff = abs(rectArea - contourArea);
-    return diff < maxDiff;
-}
+void cropImg() {
+    Mat image = imread("../netBuildings.png");
 
-// нахождение контура описывающего прямоугольника
-vector<Point> processingMinAreaRect(vector<Point> contour) {
-    RotatedRect rect = minAreaRect(contour);
-    Point2f rectPoints[4];
-    rect.points(rectPoints);
-    vector<Point> result;
-    for (Point point: rectPoints) {
-        result.push_back(point);
-    }
-    return result;
+    int startX = 900, startY = 500, width = 500, height = 500;
+
+    Mat ROI(image, Rect(startX,startY,width,height));
+
+    Mat croppedImage;
+
+    ROI.copyTo(croppedImage);
+
+    imwrite("../netBuildings.jpg", croppedImage);
 }
