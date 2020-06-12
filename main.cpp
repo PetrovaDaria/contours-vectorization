@@ -11,10 +11,14 @@ int main() {
     // projection();
     // gribovAlgorithm();
     // rotatedMinAreaRect();
-    processing();
+    // processing();
     // iterProcessing();
     // iouTest2();
-    // cropImg();
+    // cropImg("../netBuildings.png", "../netBuildings_3000_200_500_500/netBuildings_3000_200_500_500.png", 3000, 200, 500, 500);
+    // cropImg("../netBuildingsMarking.png", "../netBuildings_3000_200_500_500/netBuildingsMarking_3000_200_500_500.png", 3000, 200, 500, 500);
+    iterProcessing("../netBuildings_3000_200_500_500/",
+            "netBuildings_3000_200_500_500.png",
+            "netBuildingsMarking_3000_200_500_500.png");
 }
 
 void example() {
@@ -69,7 +73,6 @@ vector<vector<Point>> getVectorizedContoursFromImg(Mat img, Parameters params, S
 
         // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
         vector<Point> gribovContour = processingGribovAlgorithm(
-                resultImg,
                 contour,
                 params.dpEps,
                 params.gridStartPoint.x,
@@ -115,7 +118,6 @@ vector<vector<Point>> getVectorizedContoursFromContours(vector<vector<Point>> co
 
         // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
         vector<Point> gribovContour = processingGribovAlgorithm(
-                resultImg,
                 contour,
                 params.dpEps,
                 params.gridStartPoint.x,
@@ -221,7 +223,7 @@ void processing() {
         }
 
         // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
-        vector<Point> gribovContour = processingGribovAlgorithm(
+        vector<Point> gribovContour = processingGribovAlgorithm2(
                 resultImg,
                 contour,
                 params.dpEps,
@@ -249,16 +251,12 @@ void processing() {
     imwrite(outPutImgPath, resultImg);
 }
 
-void iterProcessing() {
-//    String dirPath = "../satImg/";
-//    String inputPath = dirPath + "satImg.jpg";
-
-    String dirPath = "../netBuildings/";
-    String inputPath = dirPath + "netBuildings.jpg";
+void iterProcessing(String dirPath, String inputImgPath, String markingImgPath) {
+    String fullInputImgPath = dirPath + inputImgPath;
+    String fullMarkingImgPath = dirPath + markingImgPath;
 
     String imgPath = dirPath + "img/";
     String paramsPath = dirPath + "params/";
-
 
     // максимальная разница площадей области внутри контура и прямоугольника, описывающего его
     int maxAreaDiff = 200;
@@ -277,7 +275,10 @@ void iterProcessing() {
     vector<int> prevPointsCounts = {2, 3};
 
     // открываем исходное изображение
-    Mat img = imread(inputPath);
+    Mat img = imread(fullInputImgPath);
+
+    // открываем изображение с ручной разметкой
+    Mat markingImg = imread(fullMarkingImgPath);
 
     // это изображение только для контуров
     Mat contoursImg;
@@ -286,6 +287,11 @@ void iterProcessing() {
     // ищем на картинке контуры
     vector<vector<Point>> contours;
     findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    String iouPath = dirPath + "iou.txt";
+
+    ofstream iouOut;
+    iouOut.open(iouPath);
 
     // итерируемся по разным значениям, чтобы найти лучшее
     for (int dpEps: dpEpsilons) {
@@ -351,7 +357,7 @@ void iterProcessing() {
                     }
 
                     // если нельзя описать, как прямоугольник, то используем алгоритм Грибова
-                    vector<Point> gribovContour = processingGribovAlgorithm(
+                    vector<Point> gribovContour = processingGribovAlgorithm2(
                             resultImg,
                             contour,
                             dpEps,
@@ -374,24 +380,15 @@ void iterProcessing() {
                 }
                 Mat rightImg = Mat::zeros(img.size(), CV_8UC3);
                 fillPoly(rightImg, allRightContours, myWhite);
-                double iou = getIou(img, rightImg);
+                // double iou = getIou(img, rightImg);
+                // вычисляем iou для ручной разметки и полученного алгоритмом изображения
+                double iou = getIou(markingImg, rightImg);
+                iouOut << "eps " << dpEps << " interval " << gridInterval << " ppc " << prevPointsCount << " iou " << iou << endl;
                 cout << "eps " << dpEps << " interval " << gridInterval << " ppc " << prevPointsCount << " iou " << iou << endl;
                 imwrite(currentImagePath, resultImg);
             }
         }
     }
+    iouOut.close();
 }
 
-void cropImg() {
-    Mat image = imread("../netBuildings.png");
-
-    int startX = 900, startY = 500, width = 500, height = 500;
-
-    Mat ROI(image, Rect(startX,startY,width,height));
-
-    Mat croppedImage;
-
-    ROI.copyTo(croppedImage);
-
-    imwrite("../netBuildings.jpg", croppedImage);
-}

@@ -20,7 +20,6 @@ struct comparePoints {
 };
 
 vector<Point> processingGribovAlgorithm(
-        Mat img,
         vector<Point> contour,
         int dpEps,
         int gridStartX,

@@ -14,7 +14,6 @@ extern Scalar myBlue;
 extern Scalar myPink;
 
 vector<Point> processingGribovAlgorithm(
-        Mat img,
         vector<Point> contour,
         int dpEps,
         int gridStartX,

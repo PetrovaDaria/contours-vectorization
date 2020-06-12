@@ -52,6 +52,24 @@ void drawPoints(Mat img, vector<Point> points, Scalar color) {
     }
 }
 
+/*!
+ * обрезка картинки
+ */
+void cropImg(String imgPath, String newImgPath, int startX, int startY, int width, int height) {
+//    String imgPath = "../netBuildingsMarking.png";
+//    String newImgPath = "../netBuildingsMarking.jpg";
+
+    Mat image = imread(imgPath);
+
+    Mat ROI(image, Rect(startX, startY, width, height));
+
+    Mat croppedImage;
+
+    ROI.copyTo(croppedImage);
+
+    imwrite(newImgPath, croppedImage);
+}
+
 void printPoints(vector<Point> points) {
     for (Point point: points) {
         cout << point.x << ";" << point.y << endl;

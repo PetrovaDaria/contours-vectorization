@@ -34,6 +34,11 @@ double getIou(Mat img1, Mat img2) {
     Mat joinImg;
     bitwise_or(img1, img2, joinImg);
 
+//    showImg(img1, "img1");
+//    showImg(img2, "img2");
+//    showImg(intersectionImg, "intersection");
+//    showImg(joinImg, "join");
+
     Mat gray4;
     cvtColor(joinImg, gray4, COLOR_BGR2GRAY);
     Mat blWhImgJoin;
