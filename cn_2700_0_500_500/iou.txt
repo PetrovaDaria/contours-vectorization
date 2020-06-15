@@ -1,0 +1,6 @@
+init iou 0.635274
+eps 1 interval 1 ppc 2 iou 0.467253
+eps 1 interval 1 ppc 3 iou 0.468606
+eps 1 interval 2 ppc 2 iou 0.46305
+eps 1 interval 2 ppc 3 iou 0.462267
+eps 1 interval 3 ppc 2 iou 0.464574

@@ -262,10 +262,27 @@ vector<Point> processingGribovAlgorithm2(
     vector<Point> dpContour;
     approxPolyDP(contour, dpContour, dpEps, true);
 
-//    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
-//    Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+//    Mat tryImg = Mat::zeros(img.size(), CV_8UC3);
+//    drawLines(tryImg, contour, myPink);
+//    drawLines(tryImg, dpContour, myGreen);
+//    showImg(tryImg, "Closed");
 //
+//    vector<Point> dpContour2;
+//    approxPolyDP(contour, dpContour2, dpEps, false);
+//
+//    Mat tryImg2 = Mat::zeros(img.size(), CV_8UC3);
+//    drawLines(tryImg2, contour, myPink);
+//    drawLines(tryImg2, dpContour2, myGreen);
+//    showImg(tryImg2, "Open");
+
+//    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
+//     Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+//
+//    drawLines(rotatedContourImg, contour, myBlue);
+//    showImg(rotatedContourImg, "contour");
 //    drawLines(rotatedContourImg, dpContour, myGreen);
+//
+//    showImg(rotatedContourImg, "DP");
 
 
     double rotationAngle = getRotationAngleInDeg(dpContour);

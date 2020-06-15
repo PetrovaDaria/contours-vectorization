@@ -21,6 +21,8 @@ using namespace cv;
 using namespace std;
 
 int main();
+void tryDiffCnts();
+void testGetArea();
 vector<vector<Point>> getVectorizedContoursFromImg(Mat img, Parameters params, String outputImgPath);
 vector<vector<Point>> getVectorizedContoursFromContours(vector<vector<Point>> contours, Parameters params);
 
