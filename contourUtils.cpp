@@ -6,6 +6,11 @@
 #include <fstream>
 #include "contourUtils.h"
 
+/*!
+ * получить площадь внутри контура
+ * @param contour - контур
+ * @return площадь внутри контура
+ */
 int getContourArea(vector<Point> contour) {
     Rect boundRect = boundingRect(contour);
     int left = boundRect.x;
@@ -29,6 +34,11 @@ int getContourArea(vector<Point> contour) {
     return cntArea;
 }
 
+/*!
+ * проверка, является ли контур замкнутым
+ * @param contour - исходный контур
+ * @return true, если замкнутый, false иначе
+ */
 bool isClosedContour(vector<Point> contour) {
     for (int i = 0; i < contour.size(); i++) {
         if (i - 1 != 0 && i + 1 != contour.size()) {
@@ -40,8 +50,11 @@ bool isClosedContour(vector<Point> contour) {
     return true;
 }
 
-// двойной контур, в котором дважды повторяются точки и у которого начало где-то не в начале, переводит в одиночный
-// актуально для незамкнутых контуров
+/*!
+ * переводит контур, у которого дважды повторятся точки в нормальный. актуально для незамкнутых контуров.
+ * @param contour - исходный контур
+ * @return если был двойным, то возвращает одиночный, иначе возвращает исходный
+ */
 vector<Point> doubleContourToSingle(vector<Point> contour) {
     vector<Point> result;
     bool hasStart = false;
@@ -69,6 +82,37 @@ vector<Point> doubleContourToSingle(vector<Point> contour) {
         return contour;
     }
 
+    return result;
+}
+
+// может ли контур быть описан прямоугольником с ограничением на максимальную разность между площадями
+/*!
+ * проверка, может ли контур быть описан прямоугольником
+ * @param contour - контур
+ * @param maxDiff - максимальная разность между площадями контура и прямоугольника
+ * @return true, если может описать, false - иначе
+ */
+bool canBeDescribedByRect(vector<Point> contour, int maxDiff) {
+    RotatedRect rect = minAreaRect(contour);
+    double rectArea = rect.size.area();
+    double contourArea = getContourArea(contour);
+    double diff = abs(rectArea - contourArea);
+    return diff < maxDiff;
+}
+
+/*!
+ * нахождение контура прямоугольника, описывающего исходный контур
+ * @param contour - исходный контур
+ * @return
+ */
+vector<Point> processingMinAreaRect(vector<Point> contour) {
+    RotatedRect rect = minAreaRect(contour);
+    Point2f rectPoints[4];
+    rect.points(rectPoints);
+    vector<Point> result;
+    for (Point point: rectPoints) {
+        result.push_back(point);
+    }
     return result;
 }
 

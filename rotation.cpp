@@ -6,6 +6,12 @@
 
 #include "rotation.h"
 
+/*!
+ * повернуть контур
+ * @param contour - исходный контур
+ * @param angle - угол поворота
+ * @return повернутый контур
+ */
 vector<Point> rotateContour(vector<Point> contour, double angle) {
     Point centroid = getCentroidPoint(contour);
     vector<Point> rotatedContour;
@@ -15,6 +21,13 @@ vector<Point> rotateContour(vector<Point> contour, double angle) {
     return rotatedContour;
 }
 
+/*!
+ * повернуть контур, если известен центроид
+ * @param contour - исходный контур
+ * @param angle - угол поворота
+ * @param centroid - точка центроида
+ * @return повернутый контур
+ */
 vector<Point> rotateContourWithCentroid(vector<Point> contour, double angle, Point centroid) {
     vector<Point> rotatedContour;
     for (Point point: contour) {
@@ -23,6 +36,13 @@ vector<Point> rotateContourWithCentroid(vector<Point> contour, double angle, Poi
     return rotatedContour;
 }
 
+/*!
+ * повернуть точку
+ * @param point - исходная точка
+ * @param centroid - центроид
+ * @param rotationAngle - угол поворота
+ * @return повернутая точка
+ */
 Point getRotatedPoint(Point point, Point centroid, double rotationAngle) {
     Point centeredPoint = point - centroid;
     double phi = getPolarAngle(centeredPoint);
@@ -35,6 +55,11 @@ Point getRotatedPoint(Point point, Point centroid, double rotationAngle) {
     return inPlacePoint;
 }
 
+/*!
+ * вычислить точку центроида
+ * @param contour - контур
+ * @return центроид
+ */
 Point getCentroidPoint(vector<Point> contour) {
     Moments cntMoments = moments(contour);
     double centerX = cntMoments.m10 / cntMoments.m00;
@@ -42,34 +67,69 @@ Point getCentroidPoint(vector<Point> contour) {
     return Point(centerX, centerY);
 }
 
+/*!
+ * найти полярный угол
+ * @param point - точка
+ * @return полярный угол
+ */
 double getPolarAngle(Point point) {
     return atan2(point.y,point.x);
 }
 
+/*!
+ * найти полярный радиус
+ * @param point - точка
+ * @return полярный радиус
+ */
 double getPolarRadius(Point point) {
     return sqrt(point.x * point.x + point.y * point.y);
 }
 
+/*!
+ * перевести угол из декартовой в полярную систему координат
+ * @param angleInDeg - угол в градусах
+ * @return угол в радианах
+ */
 double fromDegToRad(double angleInDeg) {
     return angleInDeg / 180 * M_PI;
 }
 
+/*!
+ * повернуть угол из полярной в декартовую систему координат
+ * @param angleInRad - угол в радианах
+ * @return угол в градусах
+ */
 double fromRadToDeg(double angleInRad) {
     return angleInRad * 180 / M_PI;
 }
 
+/*!
+ * по полярным углу и радиусу получить координаты точки
+ * @param angleInRad - угол в радианах
+ * @param radius - радиус
+ * @return точка
+ */
 Point fromPolarToDecart(double angleInRad, double radius) {
     int x = radius * cos(angleInRad);
     int y = radius * sin(angleInRad);
     return Point(x, y);
 }
 
+/*!
+ * получить угол поворота контура
+ * @param contour - контур
+ * @return угол поворота
+ */
 double getRotationAngleInDeg(vector<Point> contour) {
     RotatedRect rect = minAreaRect(contour);
     return rect.angle;
 }
 
-// pca, результат работы которого мне не очень нравится
+/*!
+ * получить угол поворота контура методом PCA
+ * @param contour - контур
+ * @return угол поворота
+ */
 double getPCAAngle(vector<Point> contour) {
     Mat pts_mat(contour.size(), 2, CV_64F);
     for (int j = 0; j < pts_mat.rows; ++j) {

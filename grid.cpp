@@ -14,7 +14,6 @@ extern Scalar myBlue;
 extern Scalar myPink;
 
 vector<Point> processingGribovAlgorithm(
-        Mat img,
         vector<Point> contour,
         int dpEps,
         int gridStartX,
@@ -250,54 +249,47 @@ vector<Point> processingGribovAlgorithm(
     return rightRotatedContour;
 }
 
-// пока что на примере картинки с одним контуром реализую алгоритм Грибова
-void gribovAlgorithm() {
-    String parametersPath = "../gridParameters.txt";
-    String inputPath = "../oneBuilding2.jpg";
-    String outputPath = "../grid2.jpg";
-
-    ofstream out;
-    out.open(parametersPath);
-
-    Mat img = imread(inputPath);
-
-    out << img.cols << endl;
-    out << img.rows << endl;
-
-    Mat contoursImg;
-    Canny(img, contoursImg, 100, 255);
-
-    vector<vector<Point>> contours;
-    findContours(contoursImg, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-    out << contours.size() << endl;
-
-    vector<Point> contour  = contours[0];
-
-    out << contour.size() << endl;
-
-    for (Point point: contour) {
-        out << point.x << " " << point.y << endl;
-    }
-
+vector<Point> processingGribovAlgorithm2(
+        Mat img,
+        vector<Point> contour,
+        int dpEps,
+        int gridStartX,
+        int gridStartY,
+        int gridIntervalX,
+        int gridIntervalY,
+        int prevPointsCount
+) {
     vector<Point> dpContour;
-    approxPolyDP(contour, dpContour, 3, true);
+    approxPolyDP(contour, dpContour, dpEps, true);
 
-    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
-    Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+//    Mat tryImg = Mat::zeros(img.size(), CV_8UC3);
+//    drawLines(tryImg, contour, myPink);
+//    drawLines(tryImg, dpContour, myGreen);
+//    showImg(tryImg, "Closed");
+//
+//    vector<Point> dpContour2;
+//    approxPolyDP(contour, dpContour2, dpEps, false);
+//
+//    Mat tryImg2 = Mat::zeros(img.size(), CV_8UC3);
+//    drawLines(tryImg2, contour, myPink);
+//    drawLines(tryImg2, dpContour2, myGreen);
+//    showImg(tryImg2, "Open");
 
-    drawLines(rotatedContourImg, dpContour, myGreen);
+//    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
+//     Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
+//
+//    drawLines(rotatedContourImg, contour, myBlue);
+//    showImg(rotatedContourImg, "contour");
+//    drawLines(rotatedContourImg, dpContour, myGreen);
+//
+//    showImg(rotatedContourImg, "DP");
 
-    int gridStartX = 0;
-    int gridStartY = 0;
-    int gridIntervalX = 3;
-    int gridIntervalY = 3;
 
     double rotationAngle = getRotationAngleInDeg(dpContour);
     Point initCentroid = getCentroidPoint(dpContour);
     vector<Point> rotatedContour = rotateContour(dpContour, rotationAngle);
 
-    drawLines(rotatedContourImg, rotatedContour, myRed);
+    // drawLines(rotatedContourImg, rotatedContour, myRed);
 
     map<Point, vector<Point>, comparePoints> auxilaryPoints;
 
@@ -305,10 +297,10 @@ void gribovAlgorithm() {
         Point nearestGridPoint = getNearestGridPoint(rotatedPoint, gridStartX, gridStartY, gridIntervalX, gridIntervalY);
         vector<Point> neighborPoints = getAuxilaryGridPoints(nearestGridPoint, gridIntervalX, gridIntervalY);
         auxilaryPoints[rotatedPoint] = neighborPoints;
-        drawPoints(rotatedContourImg, neighborPoints, myBlue);
+        // drawPoints(rotatedContourImg, neighborPoints, myBlue);
     }
 
-    drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
+    // drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
 
     vector<vector<int>> sc;
     vector<vector<int>> da;
@@ -330,9 +322,7 @@ void gribovAlgorithm() {
     da.push_back(tempDA);
     bpp.push_back(tempBPP);
 
-    int prevPointsCount = 3;
-
-   //  double angleTolerance = 3;
+    //  double angleTolerance = 3;
 
     for (int pointNum = 1; pointNum < n; pointNum++) {
         // int pointNumMod = pointNum % n; //
@@ -432,8 +422,6 @@ void gribovAlgorithm() {
         }
     }
 
-    // тут нужно соединить последнее и первое
-
     int lastIndex = rotatedContour.size() - 1;
 
     int minSC = INFINITY;
@@ -498,28 +486,45 @@ void gribovAlgorithm() {
         currentAuxIndex = prevCoord.second;
     }
 
-    drawLines(rotatedContourImg, rightContour, myPink);
+    // drawLines(rotatedContourImg, rightContour, myPink);
 
     // vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
     vector<Point> rightRotatedContour = rotateContourWithCentroid(rightContour, -rotationAngle, initCentroid);
 
-    out << rightRotatedContour.size() << endl;
+//    out << rightRotatedContour.size() << endl;
+//
+//    for (Point point: rightRotatedContour) {
+//        out << point.x << " " << point.y << endl;
+//    }
 
-    for (Point point: rightRotatedContour) {
-        out << point.x << " " << point.y << endl;
-    }
-
-    drawLines(rotatedContourImg, rightRotatedContour, myPink);
-    showImg(rotatedContourImg, "rotated");
-    imwrite(outputPath, rotatedContourImg);
+//    drawLines(rotatedContourImg, rightRotatedContour, myPink);
+//    showImg(rotatedContourImg, "rotated");
+//    imwrite(outputPath, rotatedContourImg);
+    return rightRotatedContour;
 }
 
+/*!
+ * находит ближайшую вспомогательную точку для исходной
+ * @param point - исходная точка
+ * @param startX - x-координата начала сетки
+ * @param startY - y-координата начала сетки
+ * @param intervalX - интервал по x между точками сетки
+ * @param intervalY - интервал по y между точками сетки
+ * @return ближайшая вспомогательная точка
+ */
 Point getNearestGridPoint(Point point, int startX, int startY, int intervalX, int intervalY) {
     int nearestX = getNearestCoord(point.x, startX, intervalX);
     int nearestY = getNearestCoord(point.y, startY, intervalY);
     return Point(nearestX, nearestY);
 }
 
+/*!
+ * находит ближайшую координату сетки по некоторой оси
+ * @param pointCoord - координата исходной точки
+ * @param gridStart - начало сетки по этой оси
+ * @param gridInterval - интервал по оси между точками сетки
+ * @return ближайшее значение координаты
+ */
 int getNearestCoord(int pointCoord, int gridStart, int gridInterval) {
     int dist = (pointCoord - gridStart) % gridInterval;
     if (dist < gridInterval / 2.0) {
@@ -528,6 +533,13 @@ int getNearestCoord(int pointCoord, int gridStart, int gridInterval) {
     return pointCoord + (gridInterval - dist);
 }
 
+/*!
+ * находит все ближайшие вспомогательные точки
+ * @param centerPoint - центральная точка
+ * @param intervalX - интервал между точками по x
+ * @param intervalY - интервал между точками по y
+ * @return массив вспомогательных точек
+ */
 vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int intervalY) {
     vector<Point> neighborPoints;
     for (int i = -1; i <= 1; i++) {
@@ -538,6 +550,13 @@ vector<Point> getAuxilaryGridPoints(Point centerPoint, int intervalX, int interv
     return neighborPoints;
 }
 
+/*!
+ * находит угол между отрезками
+ * @param point1 - точка начала первого отрезка
+ * @param point2 - точка конца первого отрезка и начала второго отрезка
+ * @param point3 - точка конца второго отрезка
+ * @return угол между отрезками
+ */
 double getAngleBetweenSegments(Point point1, Point point2, Point point3) {
     Point q1 = Point(point2.x - point1.x, point2.y - point1.y);
     Point q2 = Point(point3.x - point2.x, point3.y - point2.y);
@@ -547,6 +566,15 @@ double getAngleBetweenSegments(Point point1, Point point2, Point point3) {
     return fromRadToDeg(angleInRad);
 }
 
+/*!
+ * находит наилучшую предыдущую точку
+ * @param pointNum - номер точки
+ * @param auxNum - номер вспомогательной точки
+ * @param contour - контур
+ * @param bpp - best previous points
+ * @param auxilaryPoints - всопомогательные точки
+ * @return наилучшая предыдущая точка
+ */
 Point getPrevPoint(int pointNum, int auxNum, vector<Point> contour,
         vector<vector<pair<int, int>>> bpp, map<Point, vector<Point>, comparePoints> auxilaryPoints) {
     int prevPointNum = bpp[pointNum][auxNum].first;
