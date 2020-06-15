@@ -1,0 +1,19 @@
+init iou 0.695758
+eps 1 interval 1 ppc 2 iou 0.647814
+eps 1 interval 1 ppc 3 iou 0.642766
+eps 1 interval 2 ppc 2 iou 0.642248
+eps 1 interval 2 ppc 3 iou 0.640152
+eps 1 interval 3 ppc 2 iou 0.637397
+eps 1 interval 3 ppc 3 iou 0.635191
+eps 2 interval 1 ppc 2 iou 0.644395
+eps 2 interval 1 ppc 3 iou 0.624543
+eps 2 interval 2 ppc 2 iou 0.634639
+eps 2 interval 2 ppc 3 iou 0.624512
+eps 2 interval 3 ppc 2 iou 0.628406
+eps 2 interval 3 ppc 3 iou 0.61824
+eps 3 interval 1 ppc 2 iou 0.638759
+eps 3 interval 1 ppc 3 iou 0.606799
+eps 3 interval 2 ppc 2 iou 0.629716
+eps 3 interval 2 ppc 3 iou 0.606418
+eps 3 interval 3 ppc 2 iou 0.620736
+eps 3 interval 3 ppc 3 iou 0.605273
