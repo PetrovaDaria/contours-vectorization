@@ -15,16 +15,17 @@
 #include "projection.cpp"
 #include "rotation.cpp"
 #include "iou.cpp"
-#include "parameters.cpp"
 
 using namespace cv;
 using namespace std;
 
 int main();
-void tryDiffCnts();
-void testGetArea();
-vector<vector<Point>> getVectorizedContoursFromImg(Mat img, Parameters params, String outputImgPath);
-vector<vector<Point>> getVectorizedContoursFromContours(vector<vector<Point>> contours, Parameters params);
-
-void processing();
-void iterProcessing(String dirPath, String inputImgPath, String markingImgPath);
+vector<vector<Point>> vectorizeImg(const Mat& img, const Mat& markedImg, int dpEps, int gridInterval, int ppc, const String& dirPath);
+vector<vector<Point>> vectorizeImgWithSeveralParameters(
+        const Mat& img,
+        const Mat& markedImg,
+        const vector<int>& dpEpss,
+        const vector<int>& gridIntervals,
+        const vector<int>& ppcs,
+        const String& dirPath
+);
