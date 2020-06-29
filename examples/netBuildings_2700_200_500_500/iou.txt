@@ -1,4 +1,0 @@
-eps 1 interval 1 ppc 2 iou 0.703619
-eps 1 interval 1 ppc 3 iou 0.696923
-eps 1 interval 2 ppc 2 iou 0.70025
-eps 1 interval 2 ppc 3 iou 0.69068
