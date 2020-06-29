@@ -1,3 +1,3 @@
 Initial IoU 0.732354
-eps 1 interval 1 ppc 2 iou 0.652971
-eps 1 interval 2 ppc 2 iou 0.649823
+eps 1 interval 1 ppc 2 iou 0.653149
+eps 1 interval 2 ppc 2 iou 0.649358

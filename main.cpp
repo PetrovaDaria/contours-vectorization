@@ -41,9 +41,6 @@ vector<vector<Point>> vectorizeImg(const Mat& img, const Mat& markedImg, int dpE
     ofstream timeOut;
     timeOut.open(timePath, ofstream::out);
 
-    // от этой константы избавимся, когда перепишем определение формы области
-    int maxAreaDiff = 200;
-
     // они не сильно влияют, пусть будут дефолтными
     int gridStartX = 0;
     int gridStartY = 0;
@@ -91,7 +88,7 @@ vector<vector<Point>> vectorizeImg(const Mat& img, const Mat& markedImg, int dpE
         }
 
         // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-        if (canBeDescribedByRect(contour, maxAreaDiff)) {
+        if (canBeDescribedByRect(contour)) {
             // находим контур-прямоугольник
             vector<Point> resultContour = processingMinAreaRect(contour);
 
@@ -168,9 +165,6 @@ vector<vector<Point>> vectorizeImgWithSeveralParameters(
     ofstream timeOut;
     timeOut.open(timePath, ofstream::out);
 
-    // от этой константы избавимся, когда перепишем определение формы области
-    int maxAreaDiff = 200;
-
     // они не сильно влияют, пусть будут дефолтными
     int gridStartX = 0;
     int gridStartY = 0;
@@ -236,7 +230,7 @@ vector<vector<Point>> vectorizeImgWithSeveralParameters(
                     }
 
                     // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-                    if (canBeDescribedByRect(contour, maxAreaDiff)) {
+                    if (canBeDescribedByRect(contour)) {
                         // находим контур-прямоугольник
                         vector<Point> resultContour = processingMinAreaRect(contour);
 

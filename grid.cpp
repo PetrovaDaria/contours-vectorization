@@ -232,23 +232,23 @@ vector<Point> processingGribovAlgorithm(
         currentAuxIndex = prevCoord.second;
     }
 
-    // drawLines(rotatedContourImg, rightContour, myPink);
-
-    // vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
     vector<Point> rightRotatedContour = rotateContourWithCentroid(rightContour, -rotationAngle, initCentroid);
 
-//    out << rightRotatedContour.size() << endl;
-//
-//    for (Point point: rightRotatedContour) {
-//        out << point.x << " " << point.y << endl;
-//    }
-
-//    drawLines(rotatedContourImg, rightRotatedContour, myPink);
-//    showImg(rotatedContourImg, "rotated");
-//    imwrite(outputPath, rotatedContourImg);
     return rightRotatedContour;
 }
 
+/*!
+ * Алгоритм Грибова
+ * @param img - изображение (вообще-то не используется)
+ * @param contour - контур
+ * @param dpEps - аргумент для Дугласа-Пекера
+ * @param gridStartX - координата x начала сетки
+ * @param gridStartY - координата y начала сетки
+ * @param gridIntervalX - расстояние между точками по x
+ * @param gridIntervalY - расстояние между точками по y
+ * @param prevPointsCount - количество предыдущих точек
+ * @return векторизованные контуры
+ */
 vector<Point> processingGribovAlgorithm2(
         Mat img,
         vector<Point> contour,
@@ -262,57 +262,39 @@ vector<Point> processingGribovAlgorithm2(
     vector<Point> dpContour;
     approxPolyDP(contour, dpContour, dpEps, true);
 
-//    Mat tryImg = Mat::zeros(img.size(), CV_8UC3);
-//    drawLines(tryImg, contour, myPink);
-//    drawLines(tryImg, dpContour, myGreen);
-//    showImg(tryImg, "Closed");
-//
-//    vector<Point> dpContour2;
-//    approxPolyDP(contour, dpContour2, dpEps, false);
-//
-//    Mat tryImg2 = Mat::zeros(img.size(), CV_8UC3);
-//    drawLines(tryImg2, contour, myPink);
-//    drawLines(tryImg2, dpContour2, myGreen);
-//    showImg(tryImg2, "Open");
-
-//    Mat gridImg = Mat::zeros(img.size(), CV_8UC3);
-//     Mat rotatedContourImg = Mat::zeros(img.size(), CV_8UC3);
-//
-//    drawLines(rotatedContourImg, contour, myBlue);
-//    showImg(rotatedContourImg, "contour");
-//    drawLines(rotatedContourImg, dpContour, myGreen);
-//
-//    showImg(rotatedContourImg, "DP");
-
-
+    // угол поворота
     double rotationAngle = getRotationAngleInDeg(dpContour);
+    // центроид
     Point initCentroid = getCentroidPoint(dpContour);
+    // повернутый контур
     vector<Point> rotatedContour = rotateContour(dpContour, rotationAngle);
 
-    // drawLines(rotatedContourImg, rotatedContour, myRed);
-
+    // словарь вспомогательных точек для точек контура
     map<Point, vector<Point>, comparePoints> auxilaryPoints;
 
+    // находим для всех точек вспомогательные точки
     for (const Point& rotatedPoint: rotatedContour) {
         Point nearestGridPoint = getNearestGridPoint(rotatedPoint, gridStartX, gridStartY, gridIntervalX, gridIntervalY);
         vector<Point> neighborPoints = getAuxilaryGridPoints(nearestGridPoint, gridIntervalX, gridIntervalY);
         auxilaryPoints[rotatedPoint] = neighborPoints;
-        // drawPoints(rotatedContourImg, neighborPoints, myBlue);
     }
 
-    // drawPoints(rotatedContourImg, rotatedContour, Scalar(0, 255, 255));
-
+    // segments count - количество сегментов
     vector<vector<int>> sc;
+    // deviation area - площадь отклонения контуров
     vector<vector<int>> da;
     // pair int-int - номер предыдущей точки контура и номер ее вспомогательной точки
     vector<vector<pair<int, int>>> bpp;
 
     int n = rotatedContour.size();
+    // количество вспомогательных точек для каждой точки контура
     int auxCount = 9;
 
+    // находим текущие sc, da, bpp, которые добавятся в большой список
     vector<int> tempSC;
     vector<int> tempDA;
     vector<pair<int, int>> tempBPP;
+    // инициализируем первые значения нулями
     for (int i = 0; i < auxCount; i++) {
         tempSC.push_back(0);
         tempDA.push_back(0);
@@ -322,28 +304,30 @@ vector<Point> processingGribovAlgorithm2(
     da.push_back(tempDA);
     bpp.push_back(tempBPP);
 
-    //  double angleTolerance = 3;
-
+    // проходимся по всем точкам контура, начиная со первой (отсчет с нуля)
     for (int pointNum = 1; pointNum < n; pointNum++) {
-        // int pointNumMod = pointNum % n; //
         Point currentPoint = rotatedContour[pointNum];
-        // Point currentPoint = rotatedContour[pointNumMod];
         tempSC.clear();
         tempDA.clear();
         tempBPP.clear();
+        // проходимся по всем вспомогательным точкам текущей точки контура
         for (int auxNum = 0; auxNum < auxCount; auxNum++) {
+            // переменные для нахождения лучшей точки с минимальной площадью
             double minArea = INFINITY;
             int newSC = 0;
             pair<int, int> bestPoint;
 
+            // переменные для нахождения лучшей точки с минимальной площадью, у которой угол, не кратен 45 градусам
             double minAreaNotStandard = INFINITY;
             int newSCNotStandard = 0;
             pair<int, int> bestPointNotStandard;
             double minAngleDiff = 45;
 
             Point currentAuxPoint = auxilaryPoints[currentPoint][auxNum];
+            // проходимся по предыдущим точкам контура
             for (int prevPointNum = pointNum - 1; prevPointNum >= 0 && prevPointNum > pointNum - prevPointsCount; prevPointNum--) {
                 Point prevPoint = rotatedContour[prevPointNum];
+                // проходимся по вспомогательным точкам текущей предыдущей точки контура
                 for (int prevAuxNum = 0; prevAuxNum < auxCount; prevAuxNum++) {
                     Point prevAuxPoint = auxilaryPoints[prevPoint][prevAuxNum];
                     if (prevPointNum == 0 && pointNum != 1) {
@@ -353,7 +337,9 @@ vector<Point> processingGribovAlgorithm2(
                     bool angleIsStandard = true;
                     int angleMod = 0;
                     if (prevPointNum != 0) {
+                        // находим наилучшую предыдущую точку для текущей предыдущей
                         Point prevPrevPoint = getPrevPoint(prevPointNum, prevAuxNum, rotatedContour, bpp, auxilaryPoints);
+                        // находим угол
                         double angle = getAngleBetweenSegments(prevPrevPoint, prevAuxPoint, currentAuxPoint);
                         double tempAngle = angle;
                         double normedAngle = angle - ((int)(angle / 45) * 45);
@@ -362,11 +348,14 @@ vector<Point> processingGribovAlgorithm2(
                         }
                         angleMod = (int)tempAngle % 45;
                         angleIsStandard = angleMod == 0;
+                        // если угол не стандартный и уже найденный нестандартный угол ближе к нормальному, чем текущий,
+                        // то переходим к следующей точке
                         if (!angleIsStandard && angleMod > minAngleDiff) {
                             continue;
                         }
                     }
 
+                    // строим контур, по которому будем искать площадь отклонения
                     vector<Point> newContour;
                     newContour.push_back(currentPoint);
                     for (int j = pointNum - 1; j > prevPointNum; j--){
@@ -378,21 +367,28 @@ vector<Point> processingGribovAlgorithm2(
                     newContour.push_back(currentAuxPoint);
                     double currentArea = getContourArea(newContour);
                     double allArea = currentArea + da[prevPointNum][prevAuxNum];
+                    // если угол нестандартный, то
                     if (!angleIsStandard) {
+                        // если отклонение нестандартного угла от стандартного равно текущему минимальному отклонению
                         if (angleMod == minAngleDiff) {
+                            // если площадь отклонения меньше, то текущий вариант лучше
                             if (allArea < minAreaNotStandard) {
                                 minAreaNotStandard = allArea;
                                 bestPointNotStandard = make_pair(prevPointNum, prevAuxNum);
                                 newSCNotStandard = sc[prevPointNum][prevAuxNum] + 1;
                             }
                         }
+                        // если отклонение нестандартного угла от стандартного равно меньше минимального отклонения,
+                        // то текущий вариант лучше
                         if (angleMod < minAngleDiff) {
                             minAngleDiff = angleMod;
                             minAreaNotStandard = allArea;
                             bestPointNotStandard = make_pair(prevPointNum, prevAuxNum);
                             newSCNotStandard = sc[prevPointNum][prevAuxNum] + 1;
                         }
+                        // если угол стандартный
                     } else {
+                        // если площадь отклонения меньше, выбираем текущий вариант
                         if (allArea < minArea) {
                             minArea = allArea;
                             bestPoint = make_pair(prevPointNum, prevAuxNum);
@@ -401,6 +397,7 @@ vector<Point> processingGribovAlgorithm2(
                     }
                 }
             }
+            // записываем результаты для текущей вершины
             if (newSC == 0) {
                 tempSC.push_back(newSCNotStandard);
                 tempDA.push_back(minAreaNotStandard);
@@ -429,6 +426,7 @@ vector<Point> processingGribovAlgorithm2(
     vector<int> minAuxIndex;
     vector<int> almostMinIndex;
 
+    // находим лучше вспомогательные точки последней вершины по количеству сегментов
     for (int i = 0; i < auxCount; i++) {
         int currentSC = sc[lastIndex][i];
         if (currentSC <= minSC) {
@@ -457,6 +455,7 @@ vector<Point> processingGribovAlgorithm2(
 
     int bestAuxIndex;
 
+    // находим наилучшую вспомогательную точку последней вершины по площади отклонения
     if (minAuxIndex.size() > 1) {
         double minArea = INFINITY;
         for (int i: minAuxIndex) {
@@ -472,9 +471,11 @@ vector<Point> processingGribovAlgorithm2(
 
     vector<Point> rightContour;
 
+    // берем лучшую конечную точку
     int currentPointIndex = lastIndex;
     int currentAuxIndex = bestAuxIndex;
 
+    // составляем новый контур с конца
     while (true) {
         Point currentPoint = auxilaryPoints[rotatedContour[currentPointIndex]][currentAuxIndex];
         rightContour.push_back(currentPoint);
@@ -486,20 +487,9 @@ vector<Point> processingGribovAlgorithm2(
         currentAuxIndex = prevCoord.second;
     }
 
-    // drawLines(rotatedContourImg, rightContour, myPink);
-
-    // vector<Point> rightRotatedContour = rotateContour(rightContour, -rotationAngle);
+    // разворачиваем контур обратно
     vector<Point> rightRotatedContour = rotateContourWithCentroid(rightContour, -rotationAngle, initCentroid);
 
-//    out << rightRotatedContour.size() << endl;
-//
-//    for (Point point: rightRotatedContour) {
-//        out << point.x << " " << point.y << endl;
-//    }
-
-//    drawLines(rotatedContourImg, rightRotatedContour, myPink);
-//    showImg(rotatedContourImg, "rotated");
-//    imwrite(outputPath, rotatedContourImg);
     return rightRotatedContour;
 }
 
