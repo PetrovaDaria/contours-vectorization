@@ -92,12 +92,20 @@ vector<Point> doubleContourToSingle(vector<Point> contour) {
  * @param maxDiff - максимальная разность между площадями контура и прямоугольника
  * @return true, если может описать, false - иначе
  */
-bool canBeDescribedByRect(vector<Point> contour, int maxDiff) {
+bool canBeDescribedByRectOld(vector<Point> contour, int maxDiff) {
     RotatedRect rect = minAreaRect(contour);
     double rectArea = rect.size.area();
     double contourArea = getContourArea(contour);
     double diff = abs(rectArea - contourArea);
     return diff < maxDiff;
+}
+
+bool canBeDescribedByRect(vector<Point> contour) {
+    RotatedRect rect = minAreaRect(contour);
+    double rectArea = rect.size.area();
+    double contourArea = getContourArea(contour);
+    double ratio = abs(rectArea - contourArea) / rectArea;
+    return ratio < 0.2;
 }
 
 /*!

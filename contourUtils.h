@@ -14,6 +14,7 @@ using namespace std;
 int getContourArea(vector<Point> contour);
 bool isClosedContour(vector<Point> contour);
 vector<Point> doubleContourToSingle(vector<Point> contour);
-bool canBeDescribedByRect(vector<Point> contour, int maxDiff);
+bool canBeDescribedByRectOld(vector<Point> contour, int maxDiff);
+bool canBeDescribedByRect(vector<Point> contour);
 vector<Point> processingMinAreaRect(vector<Point> contour);
 vector<Point> deleteRepeatedNeighborPoints(vector<Point> points);

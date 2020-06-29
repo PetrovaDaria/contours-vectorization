@@ -131,7 +131,7 @@ void processing() {
         drawLines(resultImg, contour, myGreen);
 
         // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-        if (canBeDescribedByRect(contour, params.maxAreaDiff)) {
+        if (canBeDescribedByRect(contour)) {
             // находим контур-прямоугольник
             vector<Point> resultContour = processingMinAreaRect(contour);
 
@@ -325,7 +325,7 @@ void iterProcessing(String dirPath, String inputImgPath, String markingImgPath) 
                     // drawLines(resultImg, contour, myGreen);
 
                     // проверяем, близок ли контур по площади к площади описывающего его прямоугольника
-                    if (canBeDescribedByRect(contour, maxAreaDiff)) {
+                    if (canBeDescribedByRect(contour)) {
                         // находим контур-прямоугольник
                         vector<Point> resultContour = processingMinAreaRect(contour);
 
